@@ -72,7 +72,7 @@ export async function ownerSignOut(): Promise<void> {
 
 export async function loadAllProgress(uid: string): Promise<Record<string, ProblemProgress>> {
   if (!db) return {};
-  const snap = await getDocs(collection(db, "users", uid, "progress"));
+  const snap = await getDocs(collection(db, "cp_pulse_users", uid, "progress"));
   const map: Record<string, ProblemProgress> = {};
   snap.forEach((d) => {
     map[d.id] = d.data() as ProblemProgress;
@@ -82,7 +82,7 @@ export async function loadAllProgress(uid: string): Promise<Record<string, Probl
 
 export async function saveProblemProgress(uid: string, item: ProblemProgress): Promise<void> {
   if (!db) return;
-  await setDoc(doc(db, "users", uid, "progress", item.key), item, { merge: true });
+  await setDoc(doc(db, "cp_pulse_users", uid, "progress", item.key), item, { merge: true });
 }
 
 export interface OwnerPrivateSettings {
@@ -96,11 +96,11 @@ export interface OwnerPrivateSettings {
 
 export async function loadOwnerSettings(uid: string): Promise<OwnerPrivateSettings> {
   if (!db) return {};
-  const snap = await getDoc(doc(db, "users", uid, "private", "settings"));
+  const snap = await getDoc(doc(db, "cp_pulse_users", uid, "private", "settings"));
   return snap.exists() ? (snap.data() as OwnerPrivateSettings) : {};
 }
 
 export async function saveOwnerSettings(uid: string, settings: OwnerPrivateSettings): Promise<void> {
   if (!db) return;
-  await setDoc(doc(db, "users", uid, "private", "settings"), settings, { merge: true });
+  await setDoc(doc(db, "cp_pulse_users", uid, "private", "settings"), settings, { merge: true });
 }
