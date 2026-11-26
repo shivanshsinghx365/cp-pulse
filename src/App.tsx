@@ -479,7 +479,7 @@ export function App() {
                 : "pill-inactive"
             }`}
           >
-            <TrendingUp className="w-3.5 h-3.5" /> Performance &amp; Rankings
+            <TrendingUp className="w-3.5 h-3.5" /> Performance Overview
           </button>
           <button
             onClick={() => setTab("diagnosis")}
@@ -533,13 +533,6 @@ export function App() {
             onJumpToTopic={(tag) => {
               setTopicJumpFilter(tag);
               setTab("upsolve");
-            }}
-            onImportSnapshot={async (snap) => {
-              if (user) {
-                await saveOwnerSnapshot(user.uid, snap);
-                setOwnerSnapshot(snap);
-                if (snap.codeforces && !liveCf) setLiveCf(snap.codeforces);
-              }
             }}
           />
         )}
