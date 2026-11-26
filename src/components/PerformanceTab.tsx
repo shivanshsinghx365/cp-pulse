@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { ArrowUpRight, CheckCircle2, ExternalLink, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import type { ProfileDiagnosis } from "../lib/analyzer";
-import type { OwnerSnapshot } from "../types";
+import type { AcRatingPoint, OwnerSnapshot } from "../types";
 import type { LiveCfResult } from "../lib/liveApi";
 
 interface Props {
   diagnosis: ProfileDiagnosis;
   cfData: LiveCfResult | null;
   lcData: OwnerSnapshot["leetcode"] | null;
+  acRatingHistory: AcRatingPoint[];
   isOwner: boolean;
   hasProfile: boolean;
   targetCfRating: number;
@@ -15,12 +16,14 @@ interface Props {
   onJumpToTopic: (tag: string) => void;
 }
 
+type PlatName = "LeetCode" | "Codeforces" | "AtCoder";
+
 interface ChartPoint {
   ts: number;
   rating: number;
   title: string;
   detail: string;
-  platform: "LeetCode" | "Codeforces";
+  platform: PlatName;
 }
 
 function formatMonthYear(ts: number): string {
@@ -35,6 +38,7 @@ export function PerformanceTab({
   diagnosis,
   cfData,
   lcData,
+  acRatingHistory,
   isOwner,
   hasProfile,
   targetCfRating,
@@ -44,7 +48,8 @@ export function PerformanceTab({
   const [windowRange, setWindowRange] = useState<"all" | "1y" | "6m">("all");
   const [showLc, setShowLc] = useState(true);
   const [showCf, setShowCf] = useState(true);
-  const [hoverIdx, setHoverIdx] = useState<{ plat: "LeetCode" | "Codeforces"; idx: number } | null>(null);
+  const [showAc, setShowAc] = useState(true);
+  const [hoverIdx, setHoverIdx] = useState<{ plat: PlatName; idx: number } | null>(null);
 
   const lcSeries = useMemo<ChartPoint[]>(() => {
     if (!lcData?.contestHistory?.length) return [];
@@ -78,6 +83,25 @@ export function PerformanceTab({
       });
   }, [cfData]);
 
+  const acSeries = useMemo<ChartPoint[]>(() => {
+    if (!acRatingHistory.length) return [];
+    return acRatingHistory
+      .filter((r) => r.isRated && r.ts > 0)
+      .slice()
+      .sort((a, b) => a.ts - b.ts)
+      .map((r) => {
+        const delta = r.newRating - r.oldRating;
+        const sign = delta >= 0 ? `+${delta}` : String(delta);
+        return {
+          ts: r.ts,
+          rating: r.newRating,
+          title: r.contestName,
+          detail: `Rank ${r.place} · ${sign} (Perf ${r.performance})`,
+          platform: "AtCoder" as const,
+        };
+      });
+  }, [acRatingHistory]);
+
   const nowSec = Math.floor(Date.now() / 1000);
   const cutoffSec =
     windowRange === "6m" ? nowSec - 183 * 86400 : windowRange === "1y" ? nowSec - 365 * 86400 : 0;
@@ -89,6 +113,10 @@ export function PerformanceTab({
   const filteredCf = useMemo(
     () => (showCf ? cfSeries.filter((p) => p.ts >= cutoffSec) : []),
     [cfSeries, showCf, cutoffSec]
+  );
+  const filteredAc = useMemo(
+    () => (showAc ? acSeries.filter((p) => p.ts >= cutoffSec) : []),
+    [acSeries, showAc, cutoffSec]
   );
 
   // Recent 5-contest momentum helpers
@@ -104,13 +132,19 @@ export function PerformanceTab({
     return cfSeries[cfSeries.length - 1].rating - prev.rating;
   }, [cfSeries]);
 
+  const acRecentDelta = useMemo(() => {
+    if (acSeries.length < 2) return null;
+    const prev = acSeries[Math.max(0, acSeries.length - 6)];
+    return acSeries[acSeries.length - 1].rating - prev.rating;
+  }, [acSeries]);
+
   if (!hasProfile) {
     return (
       <div className="surface-card rounded-2xl p-6 sm:p-8 text-center space-y-2">
         <h2 className="text-sm font-semibold text-primary-ui">No Profile Loaded</h2>
         <p className="text-xs text-muted-ui max-w-lg mx-auto leading-relaxed">
           {isOwner
-            ? "Save your Codeforces / AtCoder handles or import your LeetCode snapshot in Settings to unlock your rankings graph and performance breakdown."
+            ? "Save your Codeforces / AtCoder handles or import your LeetCode + AtCoder snapshot in Settings to unlock your rankings graph and performance breakdown."
             : "The owner profile is private and hidden by default. Sign in as the Owner or enter your own Codeforces / AtCoder handle above to inspect your ranking trend and topic standing locally."}
         </p>
       </div>
@@ -133,7 +167,7 @@ export function PerformanceTab({
   const cfBPct = cfBRow && cfBRow.total ? Math.round((100 * cfBRow.solved) / cfBRow.total) : null;
 
   function standingBadge(delta: number | null, earlyPct: number | null) {
-    if (delta === null && earlyPct === null) return { label: "Insufficient Data", cls: "pill-inactive" };
+    if (delta === null && earlyPct === null) return { label: "No History", cls: "pill-inactive" };
     if ((delta ?? 0) >= 10 && (earlyPct ?? 100) >= 75) return { label: "Good · Climbing", cls: "badge-ok" };
     if ((delta ?? 0) < -25 || (earlyPct !== null && earlyPct < 60)) return { label: "Needs Focus", cls: "badge-gap" };
     return { label: "Average · Steady", cls: "badge-warn" };
@@ -141,11 +175,13 @@ export function PerformanceTab({
 
   const lcStanding = standingBadge(lcRecentDelta, lcQ2Row);
   const cfStanding = standingBadge(cfRecentDelta, cfBPct);
+  const acStanding = standingBadge(acRecentDelta, acSeries.length ? 80 : null);
+  const acPeak = acSeries.length ? Math.max(...acSeries.map((p) => p.rating)) : null;
 
   // SVG chart bounds
-  const allPts = [...filteredLc, ...filteredCf];
+  const allPts = [...filteredLc, ...filteredCf, ...filteredAc];
   const W = 820;
-  const H = 260;
+  const H = 265;
   const PAD_L = 48;
   const PAD_R = 18;
   const PAD_T = 18;
@@ -160,9 +196,9 @@ export function PerformanceTab({
   const ratingsAll = allPts.map((p) => p.rating);
   if (filteredLc.length) ratingsAll.push(targetLcRating);
   if (filteredCf.length) ratingsAll.push(targetCfRating);
-  const rawMinY = ratingsAll.length ? Math.min(...ratingsAll) : 1000;
+  const rawMinY = ratingsAll.length ? Math.min(...ratingsAll) : 400;
   const rawMaxY = ratingsAll.length ? Math.max(...ratingsAll) : 2200;
-  const minY = Math.floor((rawMinY - 80) / 100) * 100;
+  const minY = Math.max(0, Math.floor((rawMinY - 80) / 100) * 100);
   const maxY = Math.ceil((rawMaxY + 80) / 100) * 100;
   const spanY = Math.max(200, maxY - minY);
 
@@ -178,6 +214,8 @@ export function PerformanceTab({
       ? filteredLc[hoverIdx.idx]
       : hoverIdx?.plat === "Codeforces"
       ? filteredCf[hoverIdx.idx]
+      : hoverIdx?.plat === "AtCoder"
+      ? filteredAc[hoverIdx.idx]
       : null;
 
   function handleChartMove(e: React.MouseEvent<SVGSVGElement>) {
@@ -186,24 +224,25 @@ export function PerformanceTab({
     const relX = ((e.clientX - rect.left) / Math.max(1, rect.width)) * W;
     const relY = ((e.clientY - rect.top) / Math.max(1, rect.height)) * H;
 
-    let best: { plat: "LeetCode" | "Codeforces"; idx: number; dist: number } | null = null;
-    filteredLc.forEach((p, idx) => {
-      const d = Math.hypot(xOf(p.ts) - relX, yOf(p.rating) - relY);
-      if (!best || d < best.dist) best = { plat: "LeetCode", idx, dist: d };
-    });
-    filteredCf.forEach((p, idx) => {
-      const d = Math.hypot(xOf(p.ts) - relX, yOf(p.rating) - relY);
-      if (!best || d < best.dist) best = { plat: "Codeforces", idx, dist: d };
-    });
+    let best: { plat: PlatName; idx: number; dist: number } | null = null;
+    const scan = (pts: ChartPoint[], plat: PlatName) => {
+      pts.forEach((p, idx) => {
+        const d = Math.hypot(xOf(p.ts) - relX, yOf(p.rating) - relY);
+        if (!best || d < best.dist) best = { plat, idx, dist: d };
+      });
+    };
+    scan(filteredLc, "LeetCode");
+    scan(filteredCf, "Codeforces");
+    scan(filteredAc, "AtCoder");
     if (best && (best as { dist: number }).dist < 85) {
-      setHoverIdx({ plat: (best as { plat: "LeetCode" | "Codeforces" }).plat, idx: (best as { idx: number }).idx });
+      setHoverIdx({ plat: (best as { plat: PlatName }).plat, idx: (best as { idx: number }).idx });
     }
   }
 
   return (
     <div className="space-y-4">
-      {/* Standing Overview: Good / Average / Needs Focus */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Standing Overview: LeetCode / Codeforces / AtCoder / Topics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         <div className="surface-card rounded-2xl p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-muted-ui">LeetCode Standing</span>
@@ -215,15 +254,13 @@ export function PerformanceTab({
             <span className="text-xl font-bold font-mono text-primary-ui">
               {lcSeries.length ? lcSeries[lcSeries.length - 1].rating : "—"}
             </span>
-            <span className="text-xs font-mono text-muted-ui">
-              / {targetLcRating} goal
-            </span>
+            <span className="text-xs font-mono text-muted-ui">/ {targetLcRating} goal</span>
           </div>
           <div className="text-xs text-muted-ui flex items-center gap-2">
             {lcRecentDelta !== null ? (
               <span className={`inline-flex items-center gap-0.5 font-mono ${lcRecentDelta >= 0 ? "text-ok-ui" : "text-gap-ui"}`}>
                 {lcRecentDelta >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                {lcRecentDelta >= 0 ? `+${lcRecentDelta}` : lcRecentDelta} last 5 contests
+                {lcRecentDelta >= 0 ? `+${lcRecentDelta}` : lcRecentDelta} last 5
               </span>
             ) : (
               <span>No LC history loaded</span>
@@ -251,11 +288,11 @@ export function PerformanceTab({
             {cfRecentDelta !== null ? (
               <span className={`inline-flex items-center gap-0.5 font-mono ${cfRecentDelta >= 0 ? "text-ok-ui" : "text-gap-ui"}`}>
                 {cfRecentDelta >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                {cfRecentDelta >= 0 ? `+${cfRecentDelta}` : cfRecentDelta} last 5 rounds
+                {cfRecentDelta >= 0 ? `+${cfRecentDelta}` : cfRecentDelta} last 5
               </span>
             ) : (
               <span className="inline-flex items-center gap-1">
-                <Minus className="w-3 h-3" /> No CF history loaded
+                <Minus className="w-3 h-3" /> No CF history
               </span>
             )}
             {cfBPct !== null && <span>· B {cfBPct}%</span>}
@@ -264,9 +301,36 @@ export function PerformanceTab({
 
         <div className="surface-card rounded-2xl p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-ui">AtCoder Standing</span>
+            <span className={`text-xs px-2 py-0.5 rounded-md border font-medium ${acStanding.cls}`}>
+              {acStanding.label}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-bold font-mono text-primary-ui">
+              {acSeries.length ? acSeries[acSeries.length - 1].rating : "—"}
+            </span>
+            <span className="text-xs font-mono text-muted-ui">
+              {acPeak !== null ? `Peak ${acPeak}` : `${diagnosis.acSolvedCount} ACs`}
+            </span>
+          </div>
+          <div className="text-xs text-muted-ui flex items-center gap-2">
+            {acRecentDelta !== null ? (
+              <span className={`inline-flex items-center gap-0.5 font-mono ${acRecentDelta >= 0 ? "text-ok-ui" : "text-gap-ui"}`}>
+                {acRecentDelta >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                {acRecentDelta >= 0 ? `+${acRecentDelta}` : acRecentDelta} last 5 · {diagnosis.acSolvedCount} ACs
+              </span>
+            ) : (
+              <span>{diagnosis.acSolvedCount} ACs · Snapshot needed for rating curve</span>
+            )}
+          </div>
+        </div>
+
+        <div className="surface-card rounded-2xl p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-muted-ui">Topic Health Split</span>
             <span className="text-xs font-mono text-muted-ui">
-              {goodTopics.length + avgTopics.length + badTopics.length} core topics
+              {goodTopics.length + avgTopics.length + badTopics.length} topics
             </span>
           </div>
           <div className="grid grid-cols-3 gap-1.5 text-xs font-mono">
@@ -279,7 +343,7 @@ export function PerformanceTab({
               <div className="text-sm font-bold text-warn-ui">{avgTopics.length}</div>
             </div>
             <div className="surface-inset rounded-lg px-2 py-1.5">
-              <div className="text-muted-ui font-sans">Bad / Focus</div>
+              <div className="text-muted-ui font-sans">Focus</div>
               <div className="text-sm font-bold text-gap-ui">{badTopics.length}</div>
             </div>
           </div>
@@ -292,7 +356,7 @@ export function PerformanceTab({
           <div>
             <h2 className="text-sm font-semibold text-primary-ui">Combined Contest Rating Trajectory</h2>
             <p className="text-xs text-muted-ui">
-              Shared timeline across LeetCode &amp; Codeforces with goal benchmarks. Hover any point for contest details.
+              Shared timeline across LeetCode, Codeforces &amp; AtCoder with goal benchmarks. Hover any point for contest details.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -313,6 +377,15 @@ export function PerformanceTab({
             >
               <span className="w-2 h-2 rounded-full bg-teal-400" />
               Codeforces ({filteredCf.length})
+            </button>
+            <button
+              onClick={() => setShowAc((v) => !v)}
+              className={`px-2.5 py-1 rounded-lg border inline-flex items-center gap-1.5 transition ${
+                showAc ? "badge-warn" : "pill-inactive opacity-60"
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              AtCoder ({filteredAc.length})
             </button>
             <div className="inline-flex rounded-lg border border-slate-300/50 dark:border-slate-800 overflow-hidden">
               {(
@@ -344,7 +417,15 @@ export function PerformanceTab({
           {hoveredPoint ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <span className={hoveredPoint.platform === "LeetCode" ? "text-accent-ui font-semibold" : "text-ok-ui font-semibold"}>
+                <span
+                  className={
+                    hoveredPoint.platform === "LeetCode"
+                      ? "text-accent-ui font-semibold"
+                      : hoveredPoint.platform === "Codeforces"
+                      ? "text-ok-ui font-semibold"
+                      : "text-warn-ui font-semibold"
+                  }
+                >
                   {hoveredPoint.platform}
                 </span>
                 <span className="text-primary-ui font-medium">{hoveredPoint.title}</span>
@@ -358,7 +439,7 @@ export function PerformanceTab({
           ) : (
             <span className="text-muted-ui">
               {allPts.length
-                ? "Hover over the chart to inspect any contest rank, rating jump, or problem count."
+                ? "Hover over the chart to inspect any contest rank, rating jump, or AtCoder performance."
                 : "No contest rating history points available for the selected filter."}
             </span>
           )}
@@ -372,7 +453,6 @@ export function PerformanceTab({
               onMouseMove={handleChartMove}
               onMouseLeave={() => setHoverIdx(null)}
             >
-              {/* Horizontal Grid + Y Labels */}
               {yTicks.map((val) => {
                 const y = yOf(val);
                 return (
@@ -398,7 +478,6 @@ export function PerformanceTab({
                 );
               })}
 
-              {/* Target Reference Lines */}
               {filteredLc.length > 0 && (
                 <g>
                   <line
@@ -442,7 +521,6 @@ export function PerformanceTab({
                 </g>
               )}
 
-              {/* Crosshair */}
               {hoveredPoint && (
                 <line
                   x1={xOf(hoveredPoint.ts)}
@@ -455,7 +533,6 @@ export function PerformanceTab({
                 />
               )}
 
-              {/* LeetCode Line & Dots */}
               {filteredLc.length > 1 && (
                 <polyline
                   fill="none"
@@ -481,7 +558,6 @@ export function PerformanceTab({
                 );
               })}
 
-              {/* Codeforces Line & Dots */}
               {filteredCf.length > 1 && (
                 <polyline
                   fill="none"
@@ -507,7 +583,31 @@ export function PerformanceTab({
                 );
               })}
 
-              {/* X-Axis Dates */}
+              {filteredAc.length > 1 && (
+                <polyline
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="2.2"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  points={toPolyline(filteredAc)}
+                />
+              )}
+              {filteredAc.map((p, idx) => {
+                const active = hoverIdx?.plat === "AtCoder" && hoverIdx.idx === idx;
+                return (
+                  <circle
+                    key={`ac-${p.ts}-${idx}`}
+                    cx={xOf(p.ts)}
+                    cy={yOf(p.rating)}
+                    r={active ? 5.5 : 3.8}
+                    fill={active ? "#fcd34d" : "#f59e0b"}
+                    stroke={active ? "#ffffff" : "none"}
+                    strokeWidth={active ? 1.5 : 0}
+                  />
+                );
+              })}
+
               {[0, 0.5, 1].map((f) => {
                 const ts = Math.round(minTs + f * spanTs);
                 const anchor = f === 0 ? "start" : f === 1 ? "end" : "middle";
@@ -649,12 +749,12 @@ export function PerformanceTab({
           <div>
             <h3 className="text-sm font-semibold text-ok-ui">Questions Doing Good (Top Clean Wins)</h3>
             <p className="text-xs text-muted-ui">
-              Your highest-rated Codeforces ACs showing the difficulty ceiling you already solve.
+              Your highest-rated Codeforces &amp; AtCoder ACs showing the ceiling you already solve.
             </p>
           </div>
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
             {diagnosis.cfGoodSolves.length === 0 ? (
-              <div className="text-xs text-muted-ui">Load a Codeforces handle to list your top solved problems.</div>
+              <div className="text-xs text-muted-ui">Load Codeforces or AtCoder handles to list your top solved problems.</div>
             ) : (
               diagnosis.cfGoodSolves.slice(0, 15).map((q) => (
                 <a
@@ -666,7 +766,7 @@ export function PerformanceTab({
                 >
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-mono text-muted-ui">CF · {q.slot}</span>
+                      <span className="font-mono text-muted-ui">{q.slot}</span>
                       <span className="font-semibold text-primary-ui truncate">{q.title}</span>
                     </div>
                     <div className="text-muted-ui flex items-center gap-2">

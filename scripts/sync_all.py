@@ -695,6 +695,27 @@ def sync_all(public_only: bool = False, owner_out: Path | None = None):
         for item in tpc.get(grp) or []:
             lc_tag_counts[item["tagName"]] = item["problemsSolved"]
 
+    ac_rating_history = []
+    try:
+        ac_raw_hist = get_json(f"https://atcoder.jp/users/{OWNER_AC}/history/json")
+        for r in ac_raw_hist:
+            end_str = r.get("EndTime") or r.get("StartTime") or ""
+            ts_val = 0
+            if end_str:
+                ts_val = int(datetime.datetime.fromisoformat(end_str).timestamp())
+            ac_rating_history.append({
+                "isRated": bool(r.get("IsRated")),
+                "place": r.get("Place", 0),
+                "oldRating": r.get("OldRating", 0),
+                "newRating": r.get("NewRating", 0),
+                "performance": r.get("Performance", 0),
+                "contestName": r.get("ContestNameEn") or r.get("ContestName") or "",
+                "contestScreenName": r.get("ContestScreenName") or "",
+                "ts": ts_val,
+            })
+    except Exception:
+        ac_rating_history = []
+
     owner_snapshot = {
         "updatedAt": int(NOW),
         "handles": {"leetcode": OWNER_LC, "codeforces": OWNER_CF, "atcoder": OWNER_AC},
@@ -727,6 +748,9 @@ def sync_all(public_only: bool = False, owner_out: Path | None = None):
             },
             "ratingHistory": cf_user_rating,
             "submissions": cf_user_status,
+        },
+        "atcoder": {
+            "ratingHistory": ac_rating_history,
         },
     }
     target_owner_path = owner_out or (ROOT / ".local" / "owner_snapshot.json")

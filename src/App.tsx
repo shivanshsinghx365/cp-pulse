@@ -252,6 +252,8 @@ export function App() {
     isOwner && !activeGuestMode && ownerSnapshot?.leetcode.ranking
       ? Math.round(ownerSnapshot.leetcode.ranking.rating)
       : null;
+  const acRated = isOwner && !activeGuestMode ? ownerSnapshot?.atcoder?.ratingHistory || [] : [];
+  const acRatingVal = acRated.filter((r) => r.isRated).slice(-1)[0]?.newRating ?? null;
   const quote = QUOTES[quoteIdx % QUOTES.length];
   const baseUrl = import.meta.env.BASE_URL || "./";
 
@@ -354,7 +356,7 @@ export function App() {
                     CF {liveCf?.info.rating ?? "—"} <span className="text-ok-ui">→ {targetCf}</span>
                   </span>
                   <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
-                    AC {diagnosis.acSolvedCount} ACs
+                    AC {acRatingVal !== null ? `${acRatingVal} · ` : ""}{diagnosis.acSolvedCount} ACs
                   </span>
                   <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
                     {doneCount} upsolved · {diagnosis.upsolveQueue.length} queued
@@ -523,6 +525,7 @@ export function App() {
             diagnosis={diagnosis}
             cfData={liveCf}
             lcData={isOwner && !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode : null}
+            acRatingHistory={acRated}
             isOwner={isOwner}
             hasProfile={hasProfile}
             targetCfRating={targetCf}

@@ -77,6 +77,17 @@ export interface AcSubmission {
   result: string;
 }
 
+export interface AcRatingPoint {
+  isRated: boolean;
+  place: number;
+  oldRating: number;
+  newRating: number;
+  performance: number;
+  contestName: string;
+  contestScreenName?: string;
+  ts: number;
+}
+
 export interface OwnerSnapshot {
   updatedAt: number;
   handles: { leetcode: string; codeforces: string; atcoder: string };
@@ -123,6 +134,9 @@ export interface OwnerSnapshot {
     };
     ratingHistory: CfRatingPoint[];
     submissions: CfSubmission[];
+  };
+  atcoder?: {
+    ratingHistory: AcRatingPoint[];
   };
 }
 

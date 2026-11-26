@@ -185,7 +185,7 @@ export function analyzeProfile(
       }
       cfGoodSolves.push({
         key: makeProblemKey("Codeforces", id),
-        slot: `${item.cid}${item.idx}`,
+        slot: `CF · ${item.cid}${item.idx}`,
         title: item.name,
         url: `https://codeforces.com/contest/${item.cid}/problem/${item.idx}`,
         rating: item.rating,
@@ -298,15 +298,17 @@ export function analyzeProfile(
     .map((r) => r.tag);
 
   // 2. AtCoder analysis
-  const acMap = new Map<string, { ok: boolean; cid: string; ts: number; lastRes: string }>();
+  const acMap = new Map<string, { ok: boolean; failCount: number; cid: string; ts: number; lastRes: string }>();
   for (const s of acSubs) {
     const cur = acMap.get(s.problem_id) || {
       ok: false,
+      failCount: 0,
       cid: s.contest_id,
       ts: s.epoch_second,
       lastRes: s.result,
     };
     if (s.result === "AC") cur.ok = true;
+    else cur.failCount += 1;
     cur.ts = Math.max(cur.ts, s.epoch_second);
     cur.lastRes = s.result;
     acMap.set(s.problem_id, cur);
@@ -316,13 +318,26 @@ export function analyzeProfile(
   const acUnsolved: UpsolveItem[] = [];
   for (const [pid, info] of acMap.entries()) {
     const q = qById.get(pid);
+    const slotIdx = (q?.slot || pid.split("_").pop() || "?").toUpperCase();
+    const slotLbl = `${info.cid.toUpperCase()} ${slotIdx}`;
     if (info.ok) {
       acSolvedCount++;
       if (q?.rating !== null && q?.rating !== undefined) {
         acMaxDiff = acMaxDiff === null ? q.rating : Math.max(acMaxDiff, q.rating);
       }
+      cfGoodSolves.push({
+        key: makeProblemKey("AtCoder", pid),
+        slot: `AC · ${slotLbl}`,
+        title: formatAtCoderTitle(pid, q?.title),
+        url: `https://atcoder.jp/contests/${info.cid}/tasks/${pid}`,
+        rating: q?.rating ?? null,
+        ratingLabel: q?.rating !== null && q?.rating !== undefined ? `AC ${q.rating}` : "AtCoder",
+        tags: uniq(q?.tags || []),
+        cleanAc: info.failCount === 0,
+        failCount: info.failCount,
+        ts: info.ts,
+      });
     } else {
-      const slotLbl = `${info.cid.toUpperCase()} ${pid.split("_").pop()?.toUpperCase() || "?"}`;
       acUnsolved.push({
         key: makeProblemKey("AtCoder", pid),
         platform: "AtCoder",
