@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Sparkles,
   Sun,
+  TrendingUp,
   UserCheck,
   Zap,
 } from "lucide-react";
@@ -43,9 +44,10 @@ import type {
 import { HeatmapTab } from "./components/HeatmapTab";
 import { UpsolveTab } from "./components/UpsolveTab";
 import { DiagnosisTab } from "./components/DiagnosisTab";
+import { PerformanceTab } from "./components/PerformanceTab";
 import { OwnerLoginModal, OwnerSettingsModal } from "./components/Modals";
 
-type TabId = "upsolve" | "diagnosis" | "heatmap";
+type TabId = "upsolve" | "performance" | "diagnosis" | "heatmap";
 
 const QUOTES = [
   {
@@ -468,6 +470,16 @@ export function App() {
             <ListChecks className="w-3.5 h-3.5" /> POTD &amp; Dynamic Upsolve Queue ({diagnosis.upsolveQueue.length})
           </button>
           <button
+            onClick={() => setTab("performance")}
+            className={`text-xs font-medium px-3.5 py-2 rounded-xl border inline-flex items-center gap-1.5 transition ${
+              tab === "performance"
+                ? "btn-primary shadow-sm"
+                : "pill-inactive"
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" /> Performance &amp; Rankings
+          </button>
+          <button
             onClick={() => setTab("diagnosis")}
             className={`text-xs font-medium px-3.5 py-2 rounded-xl border inline-flex items-center gap-1.5 transition ${
               tab === "diagnosis"
@@ -503,6 +515,22 @@ export function App() {
             topicJumpFilter={topicJumpFilter}
             onClearTopicJump={() => setTopicJumpFilter("")}
             onUpdateProgress={handleUpdateProgress}
+          />
+        )}
+
+        {tab === "performance" && (
+          <PerformanceTab
+            diagnosis={diagnosis}
+            cfData={liveCf}
+            lcData={isOwner && !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode : null}
+            isOwner={isOwner}
+            hasProfile={hasProfile}
+            targetCfRating={targetCf}
+            targetLcRating={targetLc}
+            onJumpToTopic={(tag) => {
+              setTopicJumpFilter(tag);
+              setTab("upsolve");
+            }}
           />
         )}
 

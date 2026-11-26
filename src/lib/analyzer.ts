@@ -78,10 +78,24 @@ export interface SlotConsistencyRow {
   total: number;
 }
 
+export interface SolvedHighlight {
+  key: string;
+  slot: string;
+  title: string;
+  url: string;
+  rating: number | null;
+  ratingLabel: string;
+  tags: string[];
+  cleanAc: boolean;
+  failCount: number;
+  ts: number;
+}
+
 export interface ProfileDiagnosis {
   cfAudit: TagAuditRow[];
   weakTags: string[];
   cfUnsolved: UpsolveItem[];
+  cfGoodSolves: SolvedHighlight[];
   acUnsolved: UpsolveItem[];
   acSolvedCount: number;
   acMaxDiff: number | null;
@@ -154,10 +168,13 @@ export function analyzeProfile(
   const okByTag = new Map<string, number[]>();
   const failByTag = new Map<string, number>();
   const cfUnsolved: UpsolveItem[] = [];
+  const cfGoodSolves: SolvedHighlight[] = [];
   const cfRatingCount = new Map<number, number>();
   let cfSolvedCount = 0;
 
   for (const [id, item] of cfProbMap.entries()) {
+    const vEntries = Object.entries(item.verdicts);
+    const totalFails = vEntries.reduce((acc, [, v]) => acc + v, 0);
     if (item.ok) {
       cfSolvedCount++;
       if (item.rating) cfRatingCount.set(item.rating, (cfRatingCount.get(item.rating) || 0) + 1);
@@ -166,12 +183,22 @@ export function analyzeProfile(
         if (item.rating) arr.push(item.rating);
         okByTag.set(t, arr);
       }
+      cfGoodSolves.push({
+        key: makeProblemKey("Codeforces", id),
+        slot: `${item.cid}${item.idx}`,
+        title: item.name,
+        url: `https://codeforces.com/contest/${item.cid}/problem/${item.idx}`,
+        rating: item.rating,
+        ratingLabel: item.rating ? `CF ${item.rating}` : "Unrated",
+        tags: item.tags,
+        cleanAc: totalFails === 0,
+        failCount: totalFails,
+        ts: item.ts,
+      });
     } else {
       for (const t of item.tags) {
         failByTag.set(t, (failByTag.get(t) || 0) + 1);
       }
-      const vEntries = Object.entries(item.verdicts);
-      const totalFails = vEntries.reduce((acc, [, v]) => acc + v, 0);
       const vStr = vEntries.map(([k, v]) => `${k.replace(/_/g, " ")} ×${v}`).join(", ");
       const basePrio = item.wasContest ? 95 : 91;
       cfUnsolved.push({
@@ -535,6 +562,7 @@ export function analyzeProfile(
     cfAudit,
     weakTags,
     cfUnsolved: cfUnsolved.sort((a, b) => (a.numericRating || 9999) - (b.numericRating || 9999)),
+    cfGoodSolves: cfGoodSolves.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (a.cleanAc === b.cleanAc ? b.ts - a.ts : a.cleanAc ? -1 : 1)),
     acUnsolved,
     acSolvedCount,
     acMaxDiff,
