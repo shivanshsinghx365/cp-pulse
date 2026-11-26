@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Lock, Settings, ShieldCheck, X } from "lucide-react";
+import { Lock, Settings, ShieldCheck, Upload, X } from "lucide-react";
 import type { OwnerPrivateSettings } from "../lib/firebase";
+import type { OwnerSnapshot } from "../types";
 
 interface LoginModalProps {
   open: boolean;
@@ -100,23 +101,34 @@ interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
   settings: OwnerPrivateSettings;
+  hasSnapshot: boolean;
   onSave: (s: OwnerPrivateSettings) => Promise<void>;
+  onImportSnapshot: (snap: OwnerSnapshot) => Promise<void>;
 }
 
-export function OwnerSettingsModal({ open, onClose, settings, onSave }: SettingsModalProps) {
+export function OwnerSettingsModal({
+  open,
+  onClose,
+  settings,
+  hasSnapshot,
+  onSave,
+  onImportSnapshot,
+}: SettingsModalProps) {
   const [geminiKey, setGeminiKey] = useState(settings.geminiKey || "");
   const [targetCf, setTargetCf] = useState(String(settings.targetCfRating || 1600));
   const [targetLc, setTargetLc] = useState(String(settings.targetLcRating || 2150));
-  const [cfHandle, setCfHandle] = useState(settings.cfHandle || "shivanshx365");
-  const [acHandle, setAcHandle] = useState(settings.acHandle || "shivanshx365");
+  const [cfHandle, setCfHandle] = useState(settings.cfHandle || "");
+  const [acHandle, setAcHandle] = useState(settings.acHandle || "");
+  const [snapMsg, setSnapMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setGeminiKey(settings.geminiKey || "");
     setTargetCf(String(settings.targetCfRating || 1600));
     setTargetLc(String(settings.targetLcRating || 2150));
-    setCfHandle(settings.cfHandle || "shivanshx365");
-    setAcHandle(settings.acHandle || "shivanshx365");
+    setCfHandle(settings.cfHandle || "");
+    setAcHandle(settings.acHandle || "");
+    setSnapMsg(null);
   }, [settings, open]);
 
   useEffect(() => {
@@ -138,12 +150,30 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
         geminiKey: geminiKey.trim(),
         targetCfRating: Number(targetCf) || 1600,
         targetLcRating: Number(targetLc) || 2150,
-        cfHandle: cfHandle.trim() || "shivanshx365",
-        acHandle: acHandle.trim() || "shivanshx365",
+        cfHandle: cfHandle.trim(),
+        acHandle: acHandle.trim(),
       });
       onClose();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSnapMsg(null);
+    try {
+      const parsed = JSON.parse(await file.text()) as OwnerSnapshot;
+      if (!parsed || !parsed.leetcode) {
+        throw new Error("Invalid snapshot JSON (missing leetcode field)");
+      }
+      await onImportSnapshot(parsed);
+      setSnapMsg("Private LeetCode snapshot synced to Firestore!");
+    } catch (err) {
+      setSnapMsg(err instanceof Error ? err.message : "Failed to import snapshot");
+    } finally {
+      e.target.value = "";
     }
   }
 
@@ -195,6 +225,7 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
                 id="settings-cf"
                 value={cfHandle}
                 onChange={(e) => setCfHandle(e.target.value)}
+                placeholder="Your CF handle"
                 className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
@@ -204,6 +235,7 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
                 id="settings-ac"
                 value={acHandle}
                 onChange={(e) => setAcHandle(e.target.value)}
+                placeholder="Your AtCoder handle"
                 className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
@@ -230,6 +262,24 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
                 className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
+          </div>
+
+          <div className="surface-inset p-3 rounded-xl space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-secondary-ui">Private LeetCode Snapshot</span>
+              <span className={hasSnapshot ? "text-ok-ui font-mono" : "text-muted-ui font-mono"}>
+                {hasSnapshot ? "Synced" : "Not set"}
+              </span>
+            </div>
+            <label className="pill-inactive px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 cursor-pointer hover:brightness-110 transition">
+              <Upload className="w-3.5 h-3.5 text-accent-ui" />
+              <span>Import owner_snapshot.json</span>
+              <input type="file" accept=".json,application/json" onChange={handleFileImport} className="hidden" />
+            </label>
+            <p className="text-muted-ui">
+              Stored strictly in private Firestore so guests never see your LeetCode profile.
+            </p>
+            {snapMsg && <div className="text-accent-ui font-medium">{snapMsg}</div>}
           </div>
 
           <button

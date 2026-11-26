@@ -21,9 +21,11 @@ import {
   isOwnerUser,
   loadAllProgress,
   loadOwnerSettings,
+  loadOwnerSnapshot,
   ownerSignInWithGoogle,
   ownerSignOut,
   saveOwnerSettings,
+  saveOwnerSnapshot,
   saveProblemProgress,
   watchAuth,
   type OwnerPrivateSettings,
@@ -111,10 +113,8 @@ export function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const defaultCf = import.meta.env.VITE_OWNER_CF_HANDLE || "shivanshx365";
-  const defaultAc = import.meta.env.VITE_OWNER_AC_HANDLE || "shivanshx365";
-  const [cfHandleInput, setCfHandleInput] = useState(defaultCf);
-  const [acHandleInput, setAcHandleInput] = useState(defaultAc);
+  const [cfHandleInput, setCfHandleInput] = useState("");
+  const [acHandleInput, setAcHandleInput] = useState("");
   const [liveCf, setLiveCf] = useState<LiveCfResult | null>(null);
   const [liveAc, setLiveAc] = useState<AcSubmission[]>([]);
   const [activeGuestMode, setActiveGuestMode] = useState(false);
@@ -132,40 +132,18 @@ export function App() {
     async function boot() {
       try {
         const base = import.meta.env.BASE_URL || "./";
-        const [cRes, pRes, oRes] = await Promise.all([
+        const [cRes, pRes] = await Promise.all([
           fetch(`${base}data/contests_1yr.json`),
           fetch(`${base}data/potd.json`),
-          fetch(`${base}data/owner_snapshot.json`),
         ]);
         const cJson: RawCompactContests = await cRes.json();
         setContests(unpackContests(cJson));
         if (pRes.ok) setPotd(await pRes.json());
-        if (oRes.ok) {
-          const snap: OwnerSnapshot = await oRes.json();
-          setOwnerSnapshot(snap);
-          setLiveCf(snap.codeforces);
-        }
       } finally {
         setLoadingData(false);
       }
     }
     boot();
-  }, []);
-
-  useEffect(() => {
-    return watchAuth(async (u) => {
-      setUser(u);
-      if (u && isOwnerUser(u)) {
-        const [prog, st] = await Promise.all([loadAllProgress(u.uid), loadOwnerSettings(u.uid)]);
-        setProgress(prog);
-        setOwnerSettings(st);
-        if (st.cfHandle) setCfHandleInput(st.cfHandle);
-        if (st.acHandle) setAcHandleInput(st.acHandle);
-        setActiveGuestMode(false);
-      } else {
-        setOwnerSettings({});
-      }
-    });
   }, []);
 
   async function refreshLiveHandles(cfH: string, acH: string, asGuest: boolean) {
@@ -187,20 +165,50 @@ export function App() {
   }
 
   useEffect(() => {
-    if (!loadingData && defaultAc) {
-      fetchLiveAtCoder(defaultAc)
-        .then((ac) => setLiveAc(ac))
-        .catch(() => {});
-    }
-  }, [loadingData, defaultAc]);
+    return watchAuth(async (u) => {
+      setUser(u);
+      if (u && isOwnerUser(u)) {
+        const [prog, st, snap] = await Promise.all([
+          loadAllProgress(u.uid),
+          loadOwnerSettings(u.uid),
+          loadOwnerSnapshot(u.uid),
+        ]);
+        setProgress(prog);
+        setOwnerSettings(st);
+        setOwnerSnapshot(snap);
+        const cfH = (st.cfHandle || snap?.handles?.codeforces || "").trim();
+        const acH = (st.acHandle || snap?.handles?.atcoder || "").trim();
+        setCfHandleInput(cfH);
+        setAcHandleInput(acH);
+        if (snap?.codeforces) setLiveCf(snap.codeforces);
+        setActiveGuestMode(false);
+        if (cfH || acH) {
+          refreshLiveHandles(cfH, acH, false);
+        }
+      } else {
+        setOwnerSettings({});
+        setOwnerSnapshot(null);
+        setProgress({});
+        setLiveCf(null);
+        setLiveAc([]);
+        setCfHandleInput("");
+        setAcHandleInput("");
+        setActiveGuestMode(false);
+      }
+    });
+  }, []);
 
   const targetCf = ownerSettings.targetCfRating || 1600;
   const targetLc = ownerSettings.targetLcRating || 2150;
 
   const diagnosis = useMemo(() => {
-    const useOwnerLc = !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode.missedContestQuestions : null;
-    return analyzeProfile(contests, potd, liveCf, liveAc, useOwnerLc, targetCf);
-  }, [contests, potd, liveCf, liveAc, activeGuestMode, ownerSnapshot, targetCf]);
+    const useOwnerLc = isOwner && !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode.missedContestQuestions : null;
+    const recentAcSlugs =
+      isOwner && !activeGuestMode && ownerSnapshot
+        ? ownerSnapshot.leetcode.recentAc.map((a) => a.titleSlug)
+        : [];
+    return analyzeProfile(contests, potd, liveCf, liveAc, useOwnerLc, targetCf, recentAcSlugs);
+  }, [contests, potd, liveCf, liveAc, isOwner, activeGuestMode, ownerSnapshot, targetCf]);
 
   async function handleUpdateProgress(
     key: string,
@@ -237,7 +245,11 @@ export function App() {
   }
 
   const doneCount = Object.values(progress).filter((p) => p.status === "done").length;
-  const lcRatingVal = !activeGuestMode && ownerSnapshot?.leetcode.ranking ? Math.round(ownerSnapshot.leetcode.ranking.rating) : null;
+  const hasProfile = Boolean(liveCf || liveAc.length > 0 || (isOwner && ownerSnapshot));
+  const lcRatingVal =
+    isOwner && !activeGuestMode && ownerSnapshot?.leetcode.ranking
+      ? Math.round(ownerSnapshot.leetcode.ranking.rating)
+      : null;
   const quote = QUOTES[quoteIdx % QUOTES.length];
   const baseUrl = import.meta.env.BASE_URL || "./";
 
@@ -311,7 +323,11 @@ export function App() {
           <div className="space-y-3">
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-ui">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Steady Practice · Targets: {targetLc} LC · {targetCf} CF</span>
+              <span>
+                {hasProfile
+                  ? `Steady Practice · Targets: ${targetLc} LC · ${targetCf} CF`
+                  : "Steady Practice · Daily POTDs & 12-Month Contest Explorer"}
+              </span>
             </div>
 
             <blockquote className="space-y-1.5">
@@ -327,18 +343,37 @@ export function App() {
             </blockquote>
 
             <div className="pl-7 flex flex-wrap gap-2 pt-1 text-xs">
-              <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
-                LC {lcRatingVal ?? "—"} <span className="text-accent-ui">→ {targetLc}</span>
-              </span>
-              <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
-                CF {liveCf?.info.rating ?? "—"} <span className="text-ok-ui">→ {targetCf}</span>
-              </span>
-              <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
-                AC {diagnosis.acSolvedCount} ACs
-              </span>
-              <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
-                {doneCount} upsolved · {diagnosis.upsolveQueue.length} queued
-              </span>
+              {hasProfile ? (
+                <>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
+                    LC {lcRatingVal ?? "—"} <span className="text-accent-ui">→ {targetLc}</span>
+                  </span>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
+                    CF {liveCf?.info.rating ?? "—"} <span className="text-ok-ui">→ {targetCf}</span>
+                  </span>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
+                    AC {diagnosis.acSolvedCount} ACs
+                  </span>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
+                    {doneCount} upsolved · {diagnosis.upsolveQueue.length} queued
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-muted-ui">
+                    LC —
+                  </span>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-muted-ui">
+                    CF —
+                  </span>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-muted-ui">
+                    AC —
+                  </span>
+                  <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
+                    {diagnosis.upsolveQueue.length} daily POTDs
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -351,7 +386,9 @@ export function App() {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent pointer-events-none" />
             <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-xs text-slate-200 font-mono">
               <span>365-Day Contest Log</span>
-              <span className="text-teal-300">{diagnosis.weakTags.length} focus topics</span>
+              <span className="text-teal-300">
+                {hasProfile ? `${diagnosis.weakTags.length} focus topics` : "Sign in for personal sync"}
+              </span>
             </div>
           </div>
         </section>
@@ -384,14 +421,17 @@ export function App() {
               />
             </div>
             <button
-              onClick={() =>
-                refreshLiveHandles(
-                  cfHandleInput,
-                  acHandleInput,
-                  !isOwner && cfHandleInput.trim().toLowerCase() !== defaultCf.toLowerCase()
-                )
-              }
-              disabled={refreshingLive}
+              onClick={async () => {
+                const cfH = cfHandleInput.trim();
+                const acH = acHandleInput.trim();
+                await refreshLiveHandles(cfH, acH, !isOwner);
+                if (isOwner && user) {
+                  const nextSettings = { ...ownerSettings, cfHandle: cfH, acHandle: acH };
+                  setOwnerSettings(nextSettings);
+                  await saveOwnerSettings(user.uid, nextSettings);
+                }
+              }}
+              disabled={refreshingLive || (!cfHandleInput.trim() && !acHandleInput.trim())}
               className="pill-inactive text-xs px-3.5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshingLive ? "animate-spin" : ""}`} />
@@ -458,6 +498,7 @@ export function App() {
             weakTags={diagnosis.weakTags}
             progress={progress}
             isOwner={isOwner}
+            hasProfile={hasProfile}
             geminiKey={ownerSettings.geminiKey || ""}
             topicJumpFilter={topicJumpFilter}
             onClearTopicJump={() => setTopicJumpFilter("")}
@@ -469,8 +510,9 @@ export function App() {
           <DiagnosisTab
             diagnosis={diagnosis}
             cfData={liveCf}
-            lcData={!activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode : null}
+            lcData={isOwner && !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode : null}
             isOwner={isOwner}
+            hasProfile={hasProfile}
             targetCfRating={targetCf}
             targetLcRating={targetLc}
             onJumpToTopic={(tag) => {
@@ -503,12 +545,23 @@ export function App() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         settings={ownerSettings}
+        hasSnapshot={Boolean(ownerSnapshot)}
         onSave={async (s) => {
           if (user) {
             await saveOwnerSettings(user.uid, s);
             setOwnerSettings(s);
-            if (s.cfHandle) setCfHandleInput(s.cfHandle);
-            if (s.acHandle) setAcHandleInput(s.acHandle);
+            setCfHandleInput(s.cfHandle || "");
+            setAcHandleInput(s.acHandle || "");
+            if (s.cfHandle || s.acHandle) {
+              await refreshLiveHandles(s.cfHandle || "", s.acHandle || "", false);
+            }
+          }
+        }}
+        onImportSnapshot={async (snap) => {
+          if (user) {
+            await saveOwnerSnapshot(user.uid, snap);
+            setOwnerSnapshot(snap);
+            if (snap.codeforces && !liveCf) setLiveCf(snap.codeforces);
           }
         }}
       />

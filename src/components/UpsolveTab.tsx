@@ -25,6 +25,7 @@ interface Props {
   weakTags: string[];
   progress: Record<string, ProblemProgress>;
   isOwner: boolean;
+  hasProfile: boolean;
   geminiKey: string;
   topicJumpFilter: string;
   onClearTopicJump: () => void;
@@ -37,6 +38,7 @@ interface Props {
 const BUCKET_ACCENT: Record<UpsolveItem["bucket"], string> = {
   attempted_unsolved: "border-l-2 border-l-[#d96c52]",
   missed_contest: "border-l-2 border-l-amber-500/75",
+  potd_recent: "border-l-2 border-l-cyan-500/80",
   potd_match: "border-l-2 border-l-sky-500/80",
   weak_pillar: "border-l-2 border-l-teal-500/70",
 };
@@ -48,6 +50,7 @@ export function UpsolveTab({
   weakTags,
   progress,
   isOwner,
+  hasProfile,
   geminiKey,
   topicJumpFilter,
   onClearTopicJump,
@@ -57,6 +60,7 @@ export function UpsolveTab({
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [visibleLimit, setVisibleLimit] = useState(60);
   const [openNoteKey, setOpenNoteKey] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [aiHints, setAiHints] = useState<Record<string, string>>({});
@@ -267,10 +271,11 @@ export function UpsolveTab({
           <div className="flex flex-wrap gap-1.5">
             {[
               ["all", "All"],
-              ["attempted_unsolved", "Attempted"],
+              ["attempted_unsolved", "Tried & Unsolved"],
               ["missed_contest", "Contest Missed"],
+              ["potd_recent", "Recent POTDs"],
               ["potd_match", "POTD Match"],
-              ["weak_pillar", "Gap Drills"],
+              ["weak_pillar", "Topic Growth"],
             ].map(([id, label]) => (
               <button
                 key={id}
@@ -331,14 +336,17 @@ export function UpsolveTab({
         </div>
 
         <div className="text-xs text-muted-ui">
-          Showing <span className="font-mono text-primary-ui font-medium">{filtered.length}</span> questions ·{" "}
+          Showing <span className="font-mono text-primary-ui font-medium">{Math.min(visibleLimit, filtered.length)}</span> of{" "}
+          <span className="font-mono text-primary-ui font-medium">{filtered.length}</span> questions ·{" "}
           {isOwner
             ? "Synced with your private Firebase Firestore (ticks & notes persist across devices)."
-            : "Guest session mode (changes are temporary in memory only)."}
+            : hasProfile
+            ? "Guest handle analysis runs locally in memory only."
+            : "Guest mode: owner profile is hidden. Showing public daily & monthly POTDs — sign in or enter a handle above for personal tracking."}
         </div>
 
         <div className="space-y-2.5">
-          {filtered.slice(0, 60).map((item) => {
+          {filtered.slice(0, visibleLimit).map((item) => {
             const p = progress[item.key];
             const st = p?.status || "todo";
             const isNoteOpen = openNoteKey === item.key;
@@ -498,6 +506,17 @@ export function UpsolveTab({
             );
           })}
         </div>
+
+        {filtered.length > visibleLimit && (
+          <div className="pt-2 flex justify-center">
+            <button
+              onClick={() => setVisibleLimit((n) => n + 60)}
+              className="pill-inactive text-xs px-4 py-2 rounded-xl font-medium hover:brightness-110 transition"
+            >
+              Show more ({filtered.length - visibleLimit} remaining)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

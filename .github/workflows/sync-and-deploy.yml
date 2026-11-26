@@ -29,14 +29,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh rolling 12-month contests, POTD, and owner snapshot
+      - name: Refresh rolling 12-month public contests and POTD
         env:
-          OWNER_LC_HANDLE: ${{ vars.OWNER_LC_HANDLE || 'shivanshx365' }}
-          OWNER_CF_HANDLE: ${{ vars.OWNER_CF_HANDLE || 'shivanshx365' }}
-          OWNER_AC_HANDLE: ${{ vars.OWNER_AC_HANDLE || 'shivanshx365' }}
           # Optional repository secret for auto-tagging brand-new untagged questions
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python scripts/sync_all.py
+        run: python scripts/sync_all.py --public-only
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -56,9 +53,6 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
           VITE_OWNER_EMAIL: ${{ vars.VITE_OWNER_EMAIL }}
-          VITE_OWNER_CF_HANDLE: ${{ vars.OWNER_CF_HANDLE || 'shivanshx365' }}
-          VITE_OWNER_LC_HANDLE: ${{ vars.OWNER_LC_HANDLE || 'shivanshx365' }}
-          VITE_OWNER_AC_HANDLE: ${{ vars.OWNER_AC_HANDLE || 'shivanshx365' }}
         run: npm run build
 
       - name: Upload Pages artifact

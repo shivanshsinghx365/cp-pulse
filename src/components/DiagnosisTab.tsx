@@ -9,6 +9,7 @@ interface Props {
   cfData: LiveCfResult | null;
   lcData: OwnerSnapshot["leetcode"] | null;
   isOwner: boolean;
+  hasProfile: boolean;
   targetCfRating: number;
   targetLcRating: number;
   onJumpToTopic: (tag: string) => void;
@@ -19,6 +20,7 @@ export function DiagnosisTab({
   cfData,
   lcData,
   isOwner,
+  hasProfile,
   targetCfRating,
   targetLcRating,
   onJumpToTopic,
@@ -34,6 +36,19 @@ export function DiagnosisTab({
     if (v === "Gap") return "badge-gap";
     return "pill-inactive";
   };
+
+  if (!hasProfile) {
+    return (
+      <div className="surface-card rounded-2xl p-6 sm:p-8 text-center space-y-2">
+        <h2 className="text-sm font-semibold text-primary-ui">No Profile Loaded</h2>
+        <p className="text-xs text-muted-ui max-w-lg mx-auto leading-relaxed">
+          {isOwner
+            ? "Save your Codeforces / AtCoder handles or import your LeetCode snapshot in Settings to populate your private diagnosis."
+            : "The owner profile is private and hidden by default. Sign in as the Owner or enter your own Codeforces / AtCoder handle above to inspect ratings, weak topics, and slot consistency locally."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

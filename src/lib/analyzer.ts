@@ -99,15 +99,17 @@ export function analyzeProfile(
   cf: LiveCfResult | null,
   acSubs: AcSubmission[],
   lcMissed: OwnerSnapshot["leetcode"]["missedContestQuestions"] | null,
-  targetCfMin = 1500
+  targetCfMin = 1500,
+  lcRecentAcSlugs: string[] = []
 ): ProfileDiagnosis {
+  const hasUserProfile = Boolean(cf || acSubs.length > 0 || (lcMissed && lcMissed.length > 0));
   const allQuestions = contests.flatMap((c) => c.questions);
   const qById = new Map<string, ContestQuestion>();
   for (const q of allQuestions) {
     if (q.platform === "AtCoder") qById.set(q.id, q);
   }
 
-  // 1. Codeforces submission analysis
+  // 1. Codeforces submission analysis (both contest & practice)
   const cfProbMap = new Map<
     string,
     {
@@ -117,6 +119,7 @@ export function analyzeProfile(
       rating: number | null;
       tags: string[];
       ok: boolean;
+      wasContest: boolean;
       verdicts: Record<string, number>;
       ts: number;
     }
@@ -127,6 +130,8 @@ export function analyzeProfile(
       const p = s.problem;
       const cid = p.contestId || s.contestId || 0;
       const key = `${cid}${p.index}`;
+      const pType = s.author?.participantType || "";
+      const isContestTry = pType === "CONTESTANT" || pType === "OUT_OF_COMPETITION";
       const cur = cfProbMap.get(key) || {
         cid,
         idx: p.index,
@@ -134,9 +139,11 @@ export function analyzeProfile(
         rating: p.rating ?? null,
         tags: uniq((p.tags || []).map(mapCfTag)),
         ok: false,
+        wasContest: isContestTry,
         verdicts: {},
         ts: s.creationTimeSeconds,
       };
+      if (isContestTry) cur.wasContest = true;
       if (s.verdict === "OK") cur.ok = true;
       else if (s.verdict) cur.verdicts[s.verdict] = (cur.verdicts[s.verdict] || 0) + 1;
       cur.ts = Math.max(cur.ts, s.creationTimeSeconds);
@@ -163,9 +170,10 @@ export function analyzeProfile(
       for (const t of item.tags) {
         failByTag.set(t, (failByTag.get(t) || 0) + 1);
       }
-      const vStr = Object.entries(item.verdicts)
-        .map(([k, v]) => `${k.replace(/_/g, " ")} ×${v}`)
-        .join(", ");
+      const vEntries = Object.entries(item.verdicts);
+      const totalFails = vEntries.reduce((acc, [, v]) => acc + v, 0);
+      const vStr = vEntries.map(([k, v]) => `${k.replace(/_/g, " ")} ×${v}`).join(", ");
+      const basePrio = item.wasContest ? 95 : 91;
       cfUnsolved.push({
         key: makeProblemKey("Codeforces", id),
         platform: "Codeforces",
@@ -175,8 +183,8 @@ export function analyzeProfile(
         ratingLabel: item.rating ? `CF ${item.rating}` : "Unrated",
         numericRating: item.rating,
         tags: item.tags,
-        reason: `Attempted & unsolved (${vStr || "WA"})`,
-        priorityScore: 100 - (item.rating ? Math.abs(item.rating - targetCfMin) / 40 : 10),
+        reason: `${item.wasContest ? "Contest attempt" : "Practice attempt"} & unsolved (${vStr || "WA"})`,
+        priorityScore: basePrio + Math.min(3, totalFails - 1) - (item.rating ? Math.min(4, Math.abs(item.rating - targetCfMin) / 250) : 1),
         bucket: "attempted_unsolved",
         ts: item.ts,
       });
@@ -212,28 +220,30 @@ export function analyzeProfile(
     new Set([...coreTags, ...okByTag.keys(), ...failByTag.keys()])
   );
 
-  const cfAudit: TagAuditRow[] = allAuditTags
-    .map((tag) => {
-      const ratings = (okByTag.get(tag) || []).slice().sort((a, b) => a - b);
-      let okTotal = 0;
-      for (const item of cfProbMap.values()) {
-        if (item.ok && item.tags.includes(tag)) okTotal++;
-      }
-      const fail = failByTag.get(tag) || 0;
-      const tot = okTotal + fail;
-      const acRate = tot ? Math.round((100 * okTotal) / tot) : 0;
-      const medRating = ratings.length ? ratings[Math.floor(ratings.length / 2)] : null;
-      const maxRating = ratings.length ? ratings[ratings.length - 1] : null;
+  const cfAudit: TagAuditRow[] = cf
+    ? allAuditTags
+        .map((tag) => {
+          const ratings = (okByTag.get(tag) || []).slice().sort((a, b) => a - b);
+          let okTotal = 0;
+          for (const item of cfProbMap.values()) {
+            if (item.ok && item.tags.includes(tag)) okTotal++;
+          }
+          const fail = failByTag.get(tag) || 0;
+          const tot = okTotal + fail;
+          const acRate = tot ? Math.round((100 * okTotal) / tot) : 0;
+          const medRating = ratings.length ? ratings[Math.floor(ratings.length / 2)] : null;
+          const maxRating = ratings.length ? ratings[ratings.length - 1] : null;
 
-      let verdict: TagAuditRow["verdict"] = "Strong";
-      if (okTotal === 0) verdict = "Untouched";
-      else if (acRate < 65 || (fail >= 2 && (maxRating ?? 0) < targetCfMin)) verdict = "Gap";
-      else if (maxRating !== null && maxRating < targetCfMin) verdict = "Capped";
+          let verdict: TagAuditRow["verdict"] = "Strong";
+          if (okTotal === 0) verdict = "Untouched";
+          else if (acRate < 65 || (fail >= 2 && (maxRating ?? 0) < targetCfMin)) verdict = "Gap";
+          else if (maxRating !== null && maxRating < targetCfMin) verdict = "Capped";
 
-      return { tag, ok: okTotal, fail, acRate, medRating, maxRating, verdict };
-    })
-    .filter((r) => coreTags.includes(r.tag) || r.ok + r.fail > 0)
-    .sort((a, b) => b.ok + b.fail - (a.ok + a.fail));
+          return { tag, ok: okTotal, fail, acRate, medRating, maxRating, verdict };
+        })
+        .filter((r) => coreTags.includes(r.tag) || r.ok + r.fail > 0)
+        .sort((a, b) => b.ok + b.fail - (a.ok + a.fail))
+    : [];
 
   const highDemandSet = new Set([
     "Dynamic Programming",
@@ -446,40 +456,71 @@ export function analyzeProfile(
     ts: q.startTime,
   }));
 
+  const recentAcSet = new Set(lcRecentAcSlugs);
+  const potdRecentItems: UpsolveItem[] = potd
+    ? (potd.recent || [])
+        .filter((p) => p.slug !== potd.today.slug && !recentAcSet.has(p.slug))
+        .map((p) => ({
+          key: makeProblemKey("LeetCode", p.slug),
+          platform: "LeetCode",
+          slot: `POTD ${p.date.slice(5)}`,
+          title: `${p.id}. ${p.title}`,
+          url: p.url,
+          ratingLabel: p.difficulty,
+          numericRating: null,
+          tags: uniq(p.tags),
+          reason: `Daily POTD (${p.date}) · Steady daily growth`,
+          priorityScore: 86,
+          bucket: "potd_recent",
+          ts: Math.floor(new Date(p.date).getTime() / 1000) || 0,
+        }))
+    : [];
+
   const weakPillarItems: UpsolveItem[] = [];
-  for (const q of allQuestions.slice().sort((a, b) => b.startTime - a.startTime)) {
-    if (q.platform === "Codeforces" && cfProbMap.get(q.id)?.ok) continue;
-    if (q.platform === "AtCoder" && acMap.get(q.id)?.ok) continue;
-    if (q.platform === "Codeforces" && q.tier === "Div. 1 + Div. 2") continue;
+  if (hasUserProfile && weakSet.size > 0) {
+    for (const q of allQuestions.slice().sort((a, b) => b.startTime - a.startTime)) {
+      if (q.platform === "Codeforces" && cfProbMap.get(q.id)?.ok) continue;
+      if (q.platform === "AtCoder" && acMap.get(q.id)?.ok) continue;
+      if (q.platform === "Codeforces" && q.tier === "Div. 1 + Div. 2") continue;
 
-    const inTargetBand =
-      (q.platform === "LeetCode" && (q.slot === "Q2" || q.slot === "Q3" || q.slot === "Q4")) ||
-      (q.platform === "Codeforces" && q.rating !== null && q.rating >= cfMinDrill && q.rating <= cfMaxDrill) ||
-      (q.platform === "AtCoder" && q.rating !== null && q.rating >= 200 && q.rating <= 1900);
-    if (!inTargetBand) continue;
+      const inTargetBand =
+        (q.platform === "LeetCode" && (q.slot === "Q2" || q.slot === "Q3" || q.slot === "Q4")) ||
+        (q.platform === "Codeforces" && q.rating !== null && q.rating >= cfMinDrill && q.rating <= cfMaxDrill) ||
+        (q.platform === "AtCoder" && q.rating !== null && q.rating >= 200 && q.rating <= 1900);
+      if (!inTargetBand) continue;
 
-    const hits = q.tags.filter((t) => weakSet.has(t));
-    if (!hits.length) continue;
+      const hits = q.tags.filter((t) => weakSet.has(t));
+      if (!hits.length) continue;
 
-    weakPillarItems.push({
-      key: makeProblemKey(q.platform, q.id),
-      platform: q.platform,
-      slot: q.platform === "Codeforces" ? `${q.contestId}${q.rawIndex}` : q.platform === "AtCoder" ? `${q.contestId.toUpperCase()} ${q.slot}` : q.slot,
-      title: q.title,
-      url: q.url,
-      ratingLabel: q.rating !== null ? `${q.platform === "LeetCode" ? "LC" : q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}` : q.difficulty,
-      numericRating: q.rating,
-      tags: uniq(q.tags),
-      reason: `Targets gap: ${hits.slice(0, 2).join(", ")}`,
-      priorityScore: 70 + hits.length * 6,
-      bucket: "weak_pillar",
-      ts: q.startTime,
-    });
-    if (weakPillarItems.length >= 90) break;
+      weakPillarItems.push({
+        key: makeProblemKey(q.platform, q.id),
+        platform: q.platform,
+        slot: q.platform === "Codeforces" ? `${q.contestId}${q.rawIndex}` : q.platform === "AtCoder" ? `${q.contestId.toUpperCase()} ${q.slot}` : q.slot,
+        title: q.title,
+        url: q.url,
+        ratingLabel: q.rating !== null ? `${q.platform === "LeetCode" ? "LC" : q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}` : q.difficulty,
+        numericRating: q.rating,
+        tags: uniq(q.tags),
+        reason: `Targets growth topic: ${hits.slice(0, 2).join(", ")}`,
+        priorityScore: 70 + hits.length * 6,
+        bucket: "weak_pillar",
+        ts: q.startTime,
+      });
+      if (weakPillarItems.length >= 90) break;
+    }
   }
 
   const dedup = new Map<string, UpsolveItem>();
-  for (const item of [...cfUnsolved, ...acUnsolved, ...lcMissedItems, ...cfAttendedMissed, ...acAttendedMissed, ...potdMatchItems, ...weakPillarItems]) {
+  for (const item of [
+    ...cfUnsolved,
+    ...acUnsolved,
+    ...lcMissedItems,
+    ...cfAttendedMissed,
+    ...acAttendedMissed,
+    ...potdRecentItems,
+    ...potdMatchItems,
+    ...weakPillarItems,
+  ]) {
     const prev = dedup.get(item.key);
     if (!prev || item.priorityScore > prev.priorityScore) {
       dedup.set(item.key, item);

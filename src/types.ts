@@ -159,6 +159,6 @@ export interface UpsolveItem {
   tags: string[];
   reason: string;
   priorityScore: number;
-  bucket: "attempted_unsolved" | "missed_contest" | "potd_match" | "weak_pillar";
+  bucket: "attempted_unsolved" | "missed_contest" | "potd_match" | "potd_recent" | "weak_pillar";
   ts: number;
 }

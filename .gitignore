@@ -2,5 +2,7 @@ node_modules/
 dist/
 .env
 .env.local
+.local/
+public/data/owner_snapshot.json
 __pycache__/
 *.pyc

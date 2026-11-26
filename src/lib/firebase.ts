@@ -17,7 +17,7 @@ import {
   setDoc,
   type Firestore,
 } from "firebase/firestore";
-import type { ProblemProgress } from "../types";
+import type { OwnerSnapshot, ProblemProgress } from "../types";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
@@ -64,7 +64,7 @@ export async function ownerSignInWithGoogle(): Promise<User> {
   const cred = await signInWithPopup(auth, provider);
   if (OWNER_EMAIL && cred.user.email?.toLowerCase() !== OWNER_EMAIL) {
     await signOut(auth);
-    throw new Error(`Access denied for ${cred.user.email}. Only the owner (${OWNER_EMAIL}) can sign in.`);
+    throw new Error(`Access denied for ${cred.user.email}. Only the repository owner can sign in.`);
   }
   return cred.user;
 }
@@ -106,4 +106,15 @@ export async function loadOwnerSettings(uid: string): Promise<OwnerPrivateSettin
 export async function saveOwnerSettings(uid: string, settings: OwnerPrivateSettings): Promise<void> {
   if (!db) return;
   await setDoc(doc(db, "cp_pulse_users", uid, "private", "settings"), settings, { merge: true });
+}
+
+export async function loadOwnerSnapshot(uid: string): Promise<OwnerSnapshot | null> {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, "cp_pulse_users", uid, "private", "snapshot"));
+  return snap.exists() ? (snap.data() as OwnerSnapshot) : null;
+}
+
+export async function saveOwnerSnapshot(uid: string, snapshot: OwnerSnapshot): Promise<void> {
+  if (!db) return;
+  await setDoc(doc(db, "cp_pulse_users", uid, "private", "snapshot"), snapshot);
 }

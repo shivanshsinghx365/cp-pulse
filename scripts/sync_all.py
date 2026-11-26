@@ -28,9 +28,9 @@ PUBLIC_DATA.mkdir(parents=True, exist_ok=True)
 NOW = time.time()
 ONE_YR = NOW - 365 * 86400
 
-OWNER_LC = os.environ.get("OWNER_LC_HANDLE", "shivanshx365")
-OWNER_CF = os.environ.get("OWNER_CF_HANDLE", "shivanshx365")
-OWNER_AC = os.environ.get("OWNER_AC_HANDLE", "shivanshx365")
+OWNER_LC = os.environ.get("OWNER_LC_HANDLE", "").strip()
+OWNER_CF = os.environ.get("OWNER_CF_HANDLE", "").strip()
+OWNER_AC = os.environ.get("OWNER_AC_HANDLE", "").strip()
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 
@@ -365,7 +365,7 @@ def normalize_cf_slot(idx: str) -> str:
     return m.group(1) if m else idx
 
 
-def sync_all():
+def sync_all(public_only: bool = False, owner_out: Path | None = None):
     print("Syncing 1-year Codeforces...")
     cf_contests = get_json("https://codeforces.com/api/contest.list?gym=false")["result"]
     cf_ps = get_json("https://codeforces.com/api/problemset.problems")["result"]["problems"]
@@ -634,8 +634,12 @@ def sync_all():
             "recent": [fmt_potd(x) for x in reversed(recent_potds)],
         }, f, indent=2, ensure_ascii=False)
 
-    # Sync Owner Snapshot (LC + CF + AC)
-    print(f"Syncing owner snapshot ({OWNER_LC}/{OWNER_CF}/{OWNER_AC})...")
+    if public_only or not (OWNER_LC and OWNER_CF and OWNER_AC):
+        print("Public dataset + POTD sync complete (owner snapshot skipped).")
+        return
+
+    # Sync Owner Snapshot (LC + CF + AC) strictly to a private/local output path
+    print(f"Syncing private owner snapshot...")
     lc_user = lc_gql("""
     query($username: String!) {
       matchedUser(username: $username) {
@@ -725,10 +729,18 @@ def sync_all():
             "submissions": cf_user_status,
         },
     }
-    with open(PUBLIC_DATA / "owner_snapshot.json", "w", encoding="utf-8") as f:
+    target_owner_path = owner_out or (ROOT / ".local" / "owner_snapshot.json")
+    target_owner_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(target_owner_path, "w", encoding="utf-8") as f:
         json.dump(owner_snapshot, f, separators=(",", ":"), ensure_ascii=False)
-    print("Sync complete!")
+    print(f"Sync complete! Private owner snapshot saved to {target_owner_path}")
 
 
 if __name__ == "__main__":
-    sync_all()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--public-only", action="store_true", help="Refresh only public contests and POTD JSONs.")
+    parser.add_argument("--owner-out", type=Path, default=None, help="Private output path for owner_snapshot.json (defaults to .local/owner_snapshot.json).")
+    args = parser.parse_args()
+    sync_all(public_only=args.public_only, owner_out=args.owner_out)
