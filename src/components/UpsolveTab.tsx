@@ -55,6 +55,7 @@ export function UpsolveTab({
 }: Props) {
   const [bucket, setBucket] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("open");
+  const [levelFilter, setLevelFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [openNoteKey, setOpenNoteKey] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -76,6 +77,22 @@ export function UpsolveTab({
     const q = search.trim().toLowerCase();
     return upsolveQueue.filter((item) => {
       if (bucket !== "all" && item.bucket !== bucket) return false;
+      if (levelFilter === "early") {
+        const isEarlyLc = item.platform === "LeetCode" && (item.slot === "Q1" || item.slot === "Q2");
+        const isEarlyCf =
+          item.platform === "Codeforces" &&
+          ((item.numericRating !== null && item.numericRating <= 1300) ||
+            /[A-B][12]?$/i.test(item.slot));
+        const isEarlyAc =
+          item.platform === "AtCoder" &&
+          ((item.numericRating !== null && item.numericRating < 800) || /\b[ABC]$/i.test(item.slot));
+        if (!isEarlyLc && !isEarlyCf && !isEarlyAc) return false;
+      } else if (levelFilter === "late") {
+        const isLateLc = item.platform === "LeetCode" && (item.slot === "Q3" || item.slot === "Q4");
+        const isLateCf = item.platform === "Codeforces" && item.numericRating !== null && item.numericRating > 1300;
+        const isLateAc = item.platform === "AtCoder" && item.numericRating !== null && item.numericRating >= 800;
+        if (!isLateLc && !isLateCf && !isLateAc) return false;
+      }
       const st = progress[item.key]?.status || "todo";
       if (statusFilter === "open" && st === "done") return false;
       if (statusFilter === "done" && st !== "done") return false;
@@ -86,7 +103,7 @@ export function UpsolveTab({
       }
       return true;
     });
-  }, [upsolveQueue, bucket, statusFilter, search, progress]);
+  }, [upsolveQueue, bucket, levelFilter, statusFilter, search, progress]);
 
   async function handleAskGemini(item: {
     key: string;
@@ -281,6 +298,16 @@ export function UpsolveTab({
                 Topic: {topicJumpFilter} <X className="w-3 h-3" />
               </button>
             )}
+            <select
+              value={levelFilter}
+              onChange={(e) => setLevelFilter(e.target.value)}
+              aria-label="Filter by contest slot or difficulty"
+              className="input-field text-xs px-2.5 py-1.5 rounded-lg"
+            >
+              <option value="all">All Slots (Q1–Q4 · A–G)</option>
+              <option value="early">Early Contest (Q1–Q2 · A–B · ≤1300)</option>
+              <option value="late">Later Contest (Q3–Q4 · 1300+)</option>
+            </select>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}

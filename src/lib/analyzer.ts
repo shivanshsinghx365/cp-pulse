@@ -72,6 +72,12 @@ export function unpackContests(raw: RawCompactContests): ContestRecord[] {
   });
 }
 
+export interface SlotConsistencyRow {
+  slot: string;
+  solved: number;
+  total: number;
+}
+
 export interface ProfileDiagnosis {
   cfAudit: TagAuditRow[];
   weakTags: string[];
@@ -81,6 +87,8 @@ export interface ProfileDiagnosis {
   acMaxDiff: number | null;
   cfSolvedCount: number;
   cfRatingBuckets: { label: string; count: number }[];
+  cfAttendedCount: number;
+  cfSlotStats: SlotConsistencyRow[];
   upsolveQueue: UpsolveItem[];
   potdFollowUps: ContestQuestion[];
 }
@@ -295,15 +303,101 @@ export function analyzeProfile(
     }
   }
 
-  // 3. Rating histogram for CF
+  // 3. Attended CF contest slot consistency (excluding pure Div. 1) & histogram
   const cfRatingBuckets = Array.from(cfRatingCount.entries())
     .sort((a, b) => a[0] - b[0])
     .map(([r, c]) => ({ label: String(r), count: c }));
 
-  // 4. Build dynamic upsolve queue
+  const attendedCf = (cf?.ratingHistory || []).filter(
+    (r) => !(/\bDiv\.\s*1\b/i.test(r.contestName) && !/Div\.\s*2/i.test(r.contestName))
+  );
+  const solvedByCid = new Map<number, Set<string>>();
+  for (const item of cfProbMap.values()) {
+    if (item.ok) {
+      const set = solvedByCid.get(item.cid) || new Set<string>();
+      set.add(item.idx.charAt(0).toUpperCase());
+      solvedByCid.set(item.cid, set);
+    }
+  }
+  const cfSlotStats: SlotConsistencyRow[] = ["A", "B", "C", "D"].map((slot) => ({
+    slot,
+    solved: attendedCf.filter((r) => solvedByCid.get(r.contestId)?.has(slot)).length,
+    total: attendedCf.length,
+  }));
+
+  // Capture unattempted early/mid slots (A-D) in attended CF rounds from the 1-yr dataset
+  const attendedCfIds = new Set(attendedCf.map((r) => String(r.contestId)));
+  const cfAttendedMissed: UpsolveItem[] = [];
+  const cfSlotPrio: Record<string, number> = { A: 98, B: 96, C: 92, D: 86 };
+  for (const c of contests) {
+    if (c.platform !== "Codeforces" || !attendedCfIds.has(c.id)) continue;
+    const solvedSet = solvedByCid.get(Number(c.id)) || new Set<string>();
+    const maxSolvedOrd = Math.max(0, ...Array.from(solvedSet).map((ch) => ch.charCodeAt(0) - 64));
+    const cutoffOrd = Math.min(4, Math.max(2, maxSolvedOrd + 2)); // Always cover A & B, plus next 2 steps up to D
+    for (const q of c.questions) {
+      const ord = q.slot.charCodeAt(0) - 64;
+      if (ord < 1 || ord > cutoffOrd) continue;
+      if (cfProbMap.get(q.id)?.ok || solvedSet.has(q.slot)) continue;
+      cfAttendedMissed.push({
+        key: makeProblemKey("Codeforces", q.id),
+        platform: "Codeforces",
+        slot: `${c.id}${q.rawIndex}`,
+        title: q.title,
+        url: q.url,
+        ratingLabel: q.rating ? `CF ${q.rating}` : "Unrated",
+        numericRating: q.rating,
+        tags: uniq(q.tags),
+        reason: `Missed ${q.slot} in attended contest (${c.title})`,
+        priorityScore: cfSlotPrio[q.slot] ?? 86,
+        bucket: "missed_contest",
+        ts: c.startTime,
+      });
+    }
+  }
+
+  // Capture missed early/mid slots in attended AtCoder ABCs
+  const attendedAcCids = new Set(acSubs.map((s) => s.contest_id));
+  const acSolvedByCid = new Map<string, Set<string>>();
+  for (const [pid, info] of acMap.entries()) {
+    if (info.ok) {
+      const idx = (qById.get(pid)?.slot || pid.split("_").pop() || "").toUpperCase();
+      const set = acSolvedByCid.get(info.cid) || new Set<string>();
+      if (idx) set.add(idx);
+      acSolvedByCid.set(info.cid, set);
+    }
+  }
+  const acAttendedMissed: UpsolveItem[] = [];
+  for (const c of contests) {
+    if (c.platform !== "AtCoder" || !attendedAcCids.has(c.id)) continue;
+    const solvedSet = acSolvedByCid.get(c.id) || new Set<string>();
+    const maxSolvedOrd = Math.max(0, ...Array.from(solvedSet).map((ch) => ch.charCodeAt(0) - 64));
+    const cutoffOrd = Math.min(4, Math.max(2, maxSolvedOrd + 2));
+    for (const q of c.questions) {
+      const ord = q.slot.charCodeAt(0) - 64;
+      if (ord < 1 || ord > cutoffOrd) continue;
+      if (acMap.get(q.id)?.ok || solvedSet.has(q.slot)) continue;
+      acAttendedMissed.push({
+        key: makeProblemKey("AtCoder", q.id),
+        platform: "AtCoder",
+        slot: `${c.id.toUpperCase()} ${q.slot}`,
+        title: formatAtCoderTitle(q.id, q.title),
+        url: q.url,
+        ratingLabel: q.rating !== null ? `AC ${q.rating}` : "AtCoder",
+        numericRating: q.rating,
+        tags: uniq(q.tags),
+        reason: `Missed ${q.slot} in attended AtCoder contest (${c.id.toUpperCase()})`,
+        priorityScore: cfSlotPrio[q.slot] ?? 85,
+        bucket: "missed_contest",
+        ts: c.startTime,
+      });
+    }
+  }
+
+  // 4. Build dynamic upsolve queue (including Q1/Q2 and CF A/B/C gaps!)
   const weakSet = new Set(weakTags);
   const potdTags = new Set(potd?.today.tags.filter((t) => !GENERIC_TAGS.has(t)) || []);
 
+  const lcSlotPrio: Record<string, number> = { Q1: 99, Q2: 97, Q3: 93, Q4: 88 };
   const lcMissedItems: UpsolveItem[] = (lcMissed || []).map((m) => ({
     key: makeProblemKey("LeetCode", m.id),
     platform: "LeetCode",
@@ -314,20 +408,24 @@ export function analyzeProfile(
     numericRating: m.rating,
     tags: uniq(m.tags),
     reason: m.reason,
-    priorityScore: m.slot === "Q3" ? 94 : 88,
+    priorityScore: lcSlotPrio[m.slot] ?? 88,
     bucket: "missed_contest",
     ts: m.ts,
   }));
+
+  const cfMinDrill = Math.max(800, Math.min(1000, targetCfMin - 600));
+  const cfMaxDrill = Math.max(1800, targetCfMin + 400);
 
   const potdFollowUps = potd
     ? allQuestions
         .filter(
           (q) =>
             q.id !== potd.today.slug &&
+            q.tier !== "Div. 1 + Div. 2" &&
             q.tags.some((t) => potdTags.has(t)) &&
-            ((q.platform === "LeetCode" && (q.slot === "Q3" || q.slot === "Q4")) ||
-              (q.platform === "Codeforces" && q.rating !== null && q.rating >= 1300 && q.rating <= 1900) ||
-              (q.platform === "AtCoder" && q.rating !== null && q.rating >= 800 && q.rating <= 1800))
+            ((q.platform === "LeetCode" && (q.slot === "Q2" || q.slot === "Q3" || q.slot === "Q4")) ||
+              (q.platform === "Codeforces" && q.rating !== null && q.rating >= cfMinDrill && q.rating <= cfMaxDrill) ||
+              (q.platform === "AtCoder" && q.rating !== null && q.rating >= 200 && q.rating <= 1800))
         )
         .sort((a, b) => b.startTime - a.startTime)
         .slice(0, 6)
@@ -352,11 +450,12 @@ export function analyzeProfile(
   for (const q of allQuestions.slice().sort((a, b) => b.startTime - a.startTime)) {
     if (q.platform === "Codeforces" && cfProbMap.get(q.id)?.ok) continue;
     if (q.platform === "AtCoder" && acMap.get(q.id)?.ok) continue;
+    if (q.platform === "Codeforces" && q.tier === "Div. 1 + Div. 2") continue;
 
     const inTargetBand =
-      (q.platform === "LeetCode" && (q.slot === "Q3" || q.slot === "Q4")) ||
-      (q.platform === "Codeforces" && q.rating !== null && q.rating >= 1300 && q.rating <= 2000) ||
-      (q.platform === "AtCoder" && q.rating !== null && q.rating >= 800 && q.rating <= 1900);
+      (q.platform === "LeetCode" && (q.slot === "Q2" || q.slot === "Q3" || q.slot === "Q4")) ||
+      (q.platform === "Codeforces" && q.rating !== null && q.rating >= cfMinDrill && q.rating <= cfMaxDrill) ||
+      (q.platform === "AtCoder" && q.rating !== null && q.rating >= 200 && q.rating <= 1900);
     if (!inTargetBand) continue;
 
     const hits = q.tags.filter((t) => weakSet.has(t));
@@ -376,11 +475,11 @@ export function analyzeProfile(
       bucket: "weak_pillar",
       ts: q.startTime,
     });
-    if (weakPillarItems.length >= 60) break;
+    if (weakPillarItems.length >= 90) break;
   }
 
   const dedup = new Map<string, UpsolveItem>();
-  for (const item of [...cfUnsolved, ...acUnsolved, ...lcMissedItems, ...potdMatchItems, ...weakPillarItems]) {
+  for (const item of [...cfUnsolved, ...acUnsolved, ...lcMissedItems, ...cfAttendedMissed, ...acAttendedMissed, ...potdMatchItems, ...weakPillarItems]) {
     const prev = dedup.get(item.key);
     if (!prev || item.priorityScore > prev.priorityScore) {
       dedup.set(item.key, item);
@@ -400,6 +499,8 @@ export function analyzeProfile(
     acMaxDiff,
     cfSolvedCount,
     cfRatingBuckets,
+    cfAttendedCount: attendedCf.length,
+    cfSlotStats,
     upsolveQueue,
     potdFollowUps,
   };

@@ -15,10 +15,11 @@ const TIER_DEFS: TierDef[] = [
   { id: "LC_ALL", label: "LeetCode (All)", plat: "LeetCode", tier: null, slots: ["Q1", "Q2", "Q3", "Q4"] },
   { id: "LC_W", label: "LC Weekly", plat: "LeetCode", tier: "Weekly", slots: ["Q1", "Q2", "Q3", "Q4"] },
   { id: "LC_BW", label: "LC Biweekly", plat: "LeetCode", tier: "Biweekly", slots: ["Q1", "Q2", "Q3", "Q4"] },
-  { id: "CF_ALL", label: "Codeforces (2/3/4)", plat: "Codeforces", tier: null, slots: ["A", "B", "C", "D", "E", "F", "G"] },
+  { id: "CF_ALL", label: "CF Div. 2/3/4", plat: "Codeforces", tier: null, slots: ["A", "B", "C", "D", "E", "F", "G"] },
   { id: "CF_4", label: "CF Div. 4", plat: "Codeforces", tier: "Div. 4", slots: ["A", "B", "C", "D", "E", "F", "G", "H"] },
   { id: "CF_3", label: "CF Div. 3", plat: "Codeforces", tier: "Div. 3", slots: ["A", "B", "C", "D", "E", "F", "G", "H"] },
   { id: "CF_2", label: "CF Div. 2", plat: "Codeforces", tier: "Div. 2", slots: ["A", "B", "C", "D", "E", "F", "G"] },
+  { id: "CF_12", label: "CF 1+2 (Combined)", plat: "Codeforces", tier: "Div. 1 + Div. 2", slots: ["A", "B", "C", "D", "E", "F", "G"] },
   { id: "AC_ABC", label: "AtCoder ABC", plat: "AtCoder", tier: "ABC", slots: ["A", "B", "C", "D", "E", "F", "G"] },
 ];
 
@@ -47,7 +48,11 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
   const weakSet = useMemo(() => new Set(weakTags), [weakTags]);
 
   const { filteredProbs, slotStats, rowTags } = useMemo(() => {
-    const fc = contests.filter((c) => c.platform === def.plat && (!def.tier || c.tier === def.tier));
+    const fc = contests.filter((c) => {
+      if (c.platform !== def.plat) return false;
+      if (def.id === "CF_ALL") return c.tier === "Div. 2" || c.tier === "Div. 3" || c.tier === "Div. 4";
+      return !def.tier || c.tier === def.tier;
+    });
     const probs = fc.flatMap((c) => c.questions);
     const vis = (tags: string[]) => (hideGeneric ? tags.filter((t) => !GENERIC_TAGS.has(t)) : tags);
 

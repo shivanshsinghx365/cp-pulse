@@ -186,6 +186,64 @@ export function DiagnosisTab({
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-primary-ui">Attended Codeforces Slot Consistency (Div. 2 / 3 / 4)</h2>
+            <p className="text-xs text-muted-ui">
+              Solve rate across {diagnosis.cfAttendedCount} rated rounds (pure Div. 1 excluded). Missed early slots auto-queue in Tab 1.
+            </p>
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-xs">
+            {diagnosis.cfSlotStats.map((s) => {
+              const pct = s.total ? Math.round((100 * s.solved) / s.total) : 0;
+              return (
+                <div key={s.slot} className="surface-inset rounded-xl p-3 space-y-1">
+                  <div className="flex items-center justify-between font-semibold text-primary-ui">
+                    <span>CF {s.slot}</span>
+                    <span className="font-mono text-accent-ui">{pct}%</span>
+                  </div>
+                  <div className="text-muted-ui font-mono">
+                    {s.solved}/{s.total}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-primary-ui">Attended LeetCode Slot Consistency (Q1–Q4)</h2>
+            <p className="text-xs text-muted-ui">
+              Clear rate across {lcData ? lcData.contestHistory.length : 0} attended contests. Any missed Q1/Q2 ranks top in Upsolve.
+            </p>
+          </div>
+          {lcData && lcData.contestHistory.length > 0 ? (
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              {[1, 2, 3, 4].map((qNum) => {
+                const cleared = lcData.contestHistory.filter((h) => h.solved >= qNum).length;
+                const tot = lcData.contestHistory.length;
+                const pct = Math.round((100 * cleared) / tot);
+                return (
+                  <div key={qNum} className="surface-inset rounded-xl p-3 space-y-1">
+                    <div className="flex items-center justify-between font-semibold text-primary-ui">
+                      <span>Q{qNum}</span>
+                      <span className="font-mono text-ok-ui">{pct}%</span>
+                    </div>
+                    <div className="text-muted-ui font-mono">
+                      {cleared}/{tot}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-ui">LeetCode contest history loads from the owner snapshot.</div>
+          )}
+        </div>
+      </div>
+
       <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
