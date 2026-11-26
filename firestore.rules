@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == "shivanshsinghx365@gmail.com";
+    }
+
+    // Namespaced so it never collides with existing NoteScape collections
+    match /cp_pulse_users/{uid}/{document=**} {
+      allow read, write: if isOwner() && request.auth.uid == uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

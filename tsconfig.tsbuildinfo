@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/types.ts","./src/vite-env.d.ts","./src/components/diagnosistab.tsx","./src/components/heatmaptab.tsx","./src/components/modals.tsx","./src/components/upsolvetab.tsx","./src/lib/analyzer.ts","./src/lib/firebase.ts","./src/lib/liveapi.ts","./src/lib/tags.ts"],"version":"5.9.3"}

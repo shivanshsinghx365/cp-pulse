@@ -1,0 +1,503 @@
+{
+  "updatedAt": 1795666898,
+  "today": {
+    "date": "2026-11-26",
+    "id": "3360",
+    "title": "Stone Removal Game",
+    "slug": "stone-removal-game",
+    "url": "https://leetcode.com/problems/stone-removal-game/",
+    "difficulty": "Easy",
+    "rawTags": [
+      "Math",
+      "Simulation"
+    ],
+    "tags": [
+      "Math",
+      "Implementation & Simulation"
+    ]
+  },
+  "recent": [
+    {
+      "date": "2026-11-26",
+      "id": "3360",
+      "title": "Stone Removal Game",
+      "slug": "stone-removal-game",
+      "url": "https://leetcode.com/problems/stone-removal-game/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "Math",
+        "Simulation"
+      ],
+      "tags": [
+        "Math",
+        "Implementation & Simulation"
+      ]
+    },
+    {
+      "date": "2026-11-25",
+      "id": "3934",
+      "title": "Smallest Unique Subarray",
+      "slug": "smallest-unique-subarray",
+      "url": "https://leetcode.com/problems/smallest-unique-subarray/",
+      "difficulty": "Hard",
+      "rawTags": [
+        "Array",
+        "Hash Table",
+        "Binary Search",
+        "Rolling Hash",
+        "Suffix Array",
+        "Hash Function"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Hash Table / Set",
+        "Binary / Ternary Search",
+        "Hashing / Rolling Hash",
+        "Trie & String Suffix"
+      ]
+    },
+    {
+      "date": "2026-11-24",
+      "id": "3411",
+      "title": "Maximum Subarray With Equal Products",
+      "slug": "maximum-subarray-with-equal-products",
+      "url": "https://leetcode.com/problems/maximum-subarray-with-equal-products/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "Array",
+        "Math",
+        "Sliding Window",
+        "Enumeration",
+        "Number Theory"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Math",
+        "Two Pointers & Sliding Window",
+        "Brute Force & Enumeration",
+        "Number Theory & Mod"
+      ]
+    },
+    {
+      "date": "2026-11-23",
+      "id": "1352",
+      "title": "Product of the Last K Numbers",
+      "slug": "product-of-the-last-k-numbers",
+      "url": "https://leetcode.com/problems/product-of-the-last-k-numbers/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Math",
+        "Design",
+        "Data Stream",
+        "Prefix Sum"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Math",
+        "Design & Streams",
+        "Prefix Sum & Diff Array"
+      ]
+    },
+    {
+      "date": "2026-11-22",
+      "id": "2124",
+      "title": "Check if All A's Appears Before All B's",
+      "slug": "check-if-all-as-appears-before-all-bs",
+      "url": "https://leetcode.com/problems/check-if-all-as-appears-before-all-bs/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "String"
+      ],
+      "tags": [
+        "Strings"
+      ]
+    },
+    {
+      "date": "2026-11-21",
+      "id": "3331",
+      "title": "Find Subtree Sizes After Changes",
+      "slug": "find-subtree-sizes-after-changes",
+      "url": "https://leetcode.com/problems/find-subtree-sizes-after-changes/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Hash Table",
+        "String",
+        "Tree",
+        "Depth-First Search"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Hash Table / Set",
+        "Strings",
+        "Trees",
+        "DFS / BFS / Traversal"
+      ]
+    },
+    {
+      "date": "2026-11-20",
+      "id": "3041",
+      "title": "Maximize Consecutive Elements in an Array After Modification",
+      "slug": "maximize-consecutive-elements-in-an-array-after-modification",
+      "url": "https://leetcode.com/problems/maximize-consecutive-elements-in-an-array-after-modification/",
+      "difficulty": "Hard",
+      "rawTags": [
+        "Array",
+        "Dynamic Programming",
+        "Sorting"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Dynamic Programming",
+        "Sorting"
+      ]
+    },
+    {
+      "date": "2026-11-19",
+      "id": "2567",
+      "title": "Minimum Score by Changing Two Elements",
+      "slug": "minimum-score-by-changing-two-elements",
+      "url": "https://leetcode.com/problems/minimum-score-by-changing-two-elements/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Greedy",
+        "Sorting"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Greedy",
+        "Sorting"
+      ]
+    },
+    {
+      "date": "2026-11-18",
+      "id": "2914",
+      "title": "Minimum Number of Changes to Make Binary String Beautiful",
+      "slug": "minimum-number-of-changes-to-make-binary-string-beautiful",
+      "url": "https://leetcode.com/problems/minimum-number-of-changes-to-make-binary-string-beautiful/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "String"
+      ],
+      "tags": [
+        "Strings"
+      ]
+    },
+    {
+      "date": "2026-11-17",
+      "id": "2911",
+      "title": "Minimum Changes to Make K Semi-palindromes",
+      "slug": "minimum-changes-to-make-k-semi-palindromes",
+      "url": "https://leetcode.com/problems/minimum-changes-to-make-k-semi-palindromes/",
+      "difficulty": "Hard",
+      "rawTags": [
+        "Two Pointers",
+        "String",
+        "Dynamic Programming"
+      ],
+      "tags": [
+        "Two Pointers & Sliding Window",
+        "Strings",
+        "Dynamic Programming"
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "id": "2243",
+      "title": "Calculate Digit Sum of a String",
+      "slug": "calculate-digit-sum-of-a-string",
+      "url": "https://leetcode.com/problems/calculate-digit-sum-of-a-string/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "String",
+        "Simulation"
+      ],
+      "tags": [
+        "Strings",
+        "Implementation & Simulation"
+      ]
+    },
+    {
+      "date": "2026-11-15",
+      "id": "1524",
+      "title": "Number of Sub-arrays With Odd Sum",
+      "slug": "number-of-sub-arrays-with-odd-sum",
+      "url": "https://leetcode.com/problems/number-of-sub-arrays-with-odd-sum/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Math",
+        "Dynamic Programming",
+        "Prefix Sum"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Math",
+        "Dynamic Programming",
+        "Prefix Sum & Diff Array"
+      ]
+    },
+    {
+      "date": "2026-11-14",
+      "id": "3364",
+      "title": "Minimum Positive Sum Subarray ",
+      "slug": "minimum-positive-sum-subarray",
+      "url": "https://leetcode.com/problems/minimum-positive-sum-subarray/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "Array",
+        "Sliding Window",
+        "Prefix Sum"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Two Pointers & Sliding Window",
+        "Prefix Sum & Diff Array"
+      ]
+    },
+    {
+      "date": "2026-11-13",
+      "id": "3420",
+      "title": "Count Non-Decreasing Subarrays After K Operations",
+      "slug": "count-non-decreasing-subarrays-after-k-operations",
+      "url": "https://leetcode.com/problems/count-non-decreasing-subarrays-after-k-operations/",
+      "difficulty": "Hard",
+      "rawTags": [
+        "Array",
+        "Stack",
+        "Segment Tree",
+        "Queue",
+        "Sliding Window",
+        "Monotonic Stack",
+        "Monotonic Queue"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Stack / Monotonic Stack",
+        "SegTree / BIT (Fenwick)",
+        "Queue / Monotonic Queue",
+        "Two Pointers & Sliding Window"
+      ]
+    },
+    {
+      "date": "2026-11-12",
+      "id": "3105",
+      "title": "Longest Strictly Increasing or Strictly Decreasing Subarray",
+      "slug": "longest-strictly-increasing-or-strictly-decreasing-subarray",
+      "url": "https://leetcode.com/problems/longest-strictly-increasing-or-strictly-decreasing-subarray/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "Array"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid"
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "id": "3789",
+      "title": "Minimum Cost to Acquire Required Items",
+      "slug": "minimum-cost-to-acquire-required-items",
+      "url": "https://leetcode.com/problems/minimum-cost-to-acquire-required-items/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Math",
+        "Greedy"
+      ],
+      "tags": [
+        "Math",
+        "Greedy"
+      ]
+    },
+    {
+      "date": "2026-11-10",
+      "id": "3693",
+      "title": "Climbing Stairs II",
+      "slug": "climbing-stairs-ii",
+      "url": "https://leetcode.com/problems/climbing-stairs-ii/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Dynamic Programming"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Dynamic Programming"
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "id": "1606",
+      "title": "Find Servers That Handled Most Number of Requests",
+      "slug": "find-servers-that-handled-most-number-of-requests",
+      "url": "https://leetcode.com/problems/find-servers-that-handled-most-number-of-requests/",
+      "difficulty": "Hard",
+      "rawTags": [
+        "Array",
+        "Heap (Priority Queue)",
+        "Simulation",
+        "Ordered Set"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Heap / Priority Queue",
+        "Implementation & Simulation",
+        "Ordered Set / Balanced BST"
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "id": "1267",
+      "title": "Count Servers that Communicate",
+      "slug": "count-servers-that-communicate",
+      "url": "https://leetcode.com/problems/count-servers-that-communicate/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Depth-First Search",
+        "Breadth-First Search",
+        "Union-Find",
+        "Matrix",
+        "Counting"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "DFS / BFS / Traversal",
+        "Union-Find (DSU)",
+        "Combinatorics & Counting"
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "id": "1882",
+      "title": "Process Tasks Using Servers",
+      "slug": "process-tasks-using-servers",
+      "url": "https://leetcode.com/problems/process-tasks-using-servers/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Heap (Priority Queue)"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Heap / Priority Queue"
+      ]
+    },
+    {
+      "date": "2026-11-06",
+      "id": "2747",
+      "title": "Count Zero Request Servers",
+      "slug": "count-zero-request-servers",
+      "url": "https://leetcode.com/problems/count-zero-request-servers/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Hash Table",
+        "Sliding Window",
+        "Sorting"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Hash Table / Set",
+        "Two Pointers & Sliding Window",
+        "Sorting"
+      ]
+    },
+    {
+      "date": "2026-11-05",
+      "id": "1385",
+      "title": "Find the Distance Value Between Two Arrays",
+      "slug": "find-the-distance-value-between-two-arrays",
+      "url": "https://leetcode.com/problems/find-the-distance-value-between-two-arrays/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "Array",
+        "Two Pointers",
+        "Binary Search",
+        "Sorting"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Two Pointers & Sliding Window",
+        "Binary / Ternary Search",
+        "Sorting"
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "id": "3505",
+      "title": "Minimum Operations to Make Elements Within K Subarrays Equal",
+      "slug": "minimum-operations-to-make-elements-within-k-subarrays-equal",
+      "url": "https://leetcode.com/problems/minimum-operations-to-make-elements-within-k-subarrays-equal/",
+      "difficulty": "Hard",
+      "rawTags": [
+        "Array",
+        "Hash Table",
+        "Math",
+        "Dynamic Programming",
+        "Sliding Window",
+        "Heap (Priority Queue)"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Hash Table / Set",
+        "Math",
+        "Dynamic Programming",
+        "Two Pointers & Sliding Window",
+        "Heap / Priority Queue"
+      ]
+    },
+    {
+      "date": "2026-11-03",
+      "id": "3736",
+      "title": "Minimum Moves to Equal Array Elements III",
+      "slug": "minimum-moves-to-equal-array-elements-iii",
+      "url": "https://leetcode.com/problems/minimum-moves-to-equal-array-elements-iii/",
+      "difficulty": "Easy",
+      "rawTags": [
+        "Array",
+        "Math"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Math"
+      ]
+    },
+    {
+      "date": "2026-11-02",
+      "id": "462",
+      "title": "Minimum Moves to Equal Array Elements II",
+      "slug": "minimum-moves-to-equal-array-elements-ii",
+      "url": "https://leetcode.com/problems/minimum-moves-to-equal-array-elements-ii/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Math",
+        "Sorting"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Math",
+        "Sorting"
+      ]
+    },
+    {
+      "date": "2026-11-01",
+      "id": "453",
+      "title": "Minimum Moves to Equal Array Elements",
+      "slug": "minimum-moves-to-equal-array-elements",
+      "url": "https://leetcode.com/problems/minimum-moves-to-equal-array-elements/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Math"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Math"
+      ]
+    }
+  ]
+}
