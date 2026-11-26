@@ -116,5 +116,17 @@ export async function loadOwnerSnapshot(uid: string): Promise<OwnerSnapshot | nu
 
 export async function saveOwnerSnapshot(uid: string, snapshot: OwnerSnapshot): Promise<void> {
   if (!db) return;
-  await setDoc(doc(db, "cp_pulse_users", uid, "private", "snapshot"), snapshot);
+  // Store LC + AtCoder histories & handles cleanly (<50KB) without bloating Firestore with raw CF submissions
+  const compact: OwnerSnapshot = {
+    updatedAt: snapshot.updatedAt,
+    handles: snapshot.handles,
+    leetcode: snapshot.leetcode,
+    codeforces: {
+      info: snapshot.codeforces?.info || { handle: snapshot.handles?.codeforces || "" },
+      ratingHistory: snapshot.codeforces?.ratingHistory || [],
+      submissions: [],
+    },
+    ...(snapshot.atcoder ? { atcoder: snapshot.atcoder } : {}),
+  };
+  await setDoc(doc(db, "cp_pulse_users", uid, "private", "snapshot"), compact);
 }

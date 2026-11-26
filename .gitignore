@@ -3,6 +3,7 @@ dist/
 .env
 .env.local
 .local/
+owner_snapshot*.json
 public/data/owner_snapshot.json
 __pycache__/
 *.pyc

@@ -534,6 +534,13 @@ export function App() {
               setTopicJumpFilter(tag);
               setTab("upsolve");
             }}
+            onImportSnapshot={async (snap) => {
+              if (user) {
+                await saveOwnerSnapshot(user.uid, snap);
+                setOwnerSnapshot(snap);
+                if (snap.codeforces && !liveCf) setLiveCf(snap.codeforces);
+              }
+            }}
           />
         )}
 

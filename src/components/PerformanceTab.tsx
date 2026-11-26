@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowUpRight, CheckCircle2, ExternalLink, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, ExternalLink, Minus, TrendingDown, TrendingUp, Upload } from "lucide-react";
 import type { ProfileDiagnosis } from "../lib/analyzer";
 import type { AcRatingPoint, OwnerSnapshot } from "../types";
 import type { LiveCfResult } from "../lib/liveApi";
@@ -14,6 +14,7 @@ interface Props {
   targetCfRating: number;
   targetLcRating: number;
   onJumpToTopic: (tag: string) => void;
+  onImportSnapshot?: (snap: OwnerSnapshot) => Promise<void>;
 }
 
 type PlatName = "LeetCode" | "Codeforces" | "AtCoder";
@@ -44,12 +45,29 @@ export function PerformanceTab({
   targetCfRating,
   targetLcRating,
   onJumpToTopic,
+  onImportSnapshot,
 }: Props) {
   const [windowRange, setWindowRange] = useState<"all" | "1y" | "6m">("all");
   const [showLc, setShowLc] = useState(true);
   const [showCf, setShowCf] = useState(true);
   const [showAc, setShowAc] = useState(true);
   const [hoverIdx, setHoverIdx] = useState<{ plat: PlatName; idx: number } | null>(null);
+  const [importErr, setImportErr] = useState<string | null>(null);
+
+  async function handleQuickImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !onImportSnapshot) return;
+    setImportErr(null);
+    try {
+      const parsed = JSON.parse(await file.text()) as OwnerSnapshot;
+      if (!parsed || !parsed.leetcode) throw new Error("Invalid snapshot JSON");
+      await onImportSnapshot(parsed);
+    } catch (err) {
+      setImportErr(err instanceof Error ? err.message : "Snapshot import failed");
+    } finally {
+      e.target.value = "";
+    }
+  }
 
   const lcSeries = useMemo<ChartPoint[]>(() => {
     if (!lcData?.contestHistory?.length) return [];
@@ -411,6 +429,23 @@ export function PerformanceTab({
             </div>
           </div>
         </div>
+
+        {/* Owner Snapshot Notice when LC or AtCoder rated history isn't synced yet */}
+        {isOwner && (!lcData || acSeries.length === 0) && onImportSnapshot && (
+          <div className="badge-warn rounded-xl px-3.5 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2.5">
+            <span>
+              {!lcData
+                ? "LeetCode & AtCoder contest histories load from your private Firestore snapshot (since both block browser CORS)."
+                : "AtCoder rated contest history is missing from your snapshot — re-import your refreshed file to add the AtCoder curve."}
+            </span>
+            <label className="btn-primary px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 cursor-pointer font-medium shrink-0">
+              <Upload className="w-3.5 h-3.5" />
+              <span>Import owner_snapshot_private.json</span>
+              <input type="file" accept=".json,application/json" onChange={handleQuickImport} className="hidden" />
+            </label>
+          </div>
+        )}
+        {importErr && <div className="badge-gap rounded-xl px-3 py-2 text-xs">{importErr}</div>}
 
         {/* Hover Readout Bar */}
         <div className="surface-inset rounded-xl px-3 py-2 text-xs flex flex-wrap items-center justify-between gap-2 min-h-[34px]">

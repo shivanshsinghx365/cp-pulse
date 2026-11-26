@@ -273,11 +273,11 @@ export function OwnerSettingsModal({
             </div>
             <label className="pill-inactive px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 cursor-pointer hover:brightness-110 transition">
               <Upload className="w-3.5 h-3.5 text-accent-ui" />
-              <span>Import owner_snapshot.json</span>
+              <span>Import owner_snapshot_private.json</span>
               <input type="file" accept=".json,application/json" onChange={handleFileImport} className="hidden" />
             </label>
             <p className="text-muted-ui">
-              Stored strictly in private Firestore so guests never see your LeetCode profile.
+              Stored strictly in private Firestore so guests never see your LeetCode or AtCoder profile.
             </p>
             {snapMsg && <div className="text-accent-ui font-medium">{snapMsg}</div>}
           </div>
