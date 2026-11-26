@@ -29,11 +29,21 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Refresh rolling 12-month public contests and POTD
+      - name: Install Python deps (firebase-admin for Firestore push)
+        run: pip install firebase-admin --quiet
+
+      - name: Sync contests, POTD, and push owner snapshot to Firestore
         env:
-          # Optional repository secret for auto-tagging brand-new untagged questions
+          # Public contest + POTD refresh (always)
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python scripts/sync_all.py --public-only
+          # Private owner sync → Firestore (skipped gracefully when secrets absent)
+          OWNER_LC_HANDLE: ${{ vars.OWNER_LC_HANDLE }}
+          OWNER_CF_HANDLE: ${{ vars.OWNER_CF_HANDLE }}
+          OWNER_AC_HANDLE: ${{ vars.OWNER_AC_HANDLE }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          OWNER_UID: ${{ secrets.OWNER_UID }}
+        # Run full sync (not --public-only); Firestore push is a no-op when secrets are missing
+        run: python scripts/sync_all.py
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

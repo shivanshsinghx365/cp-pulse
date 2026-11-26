@@ -759,6 +759,57 @@ def sync_all(public_only: bool = False, owner_out: Path | None = None):
         json.dump(owner_snapshot, f, separators=(",", ":"), ensure_ascii=False)
     print(f"Sync complete! Private owner snapshot saved to {target_owner_path}")
 
+    # ── Push compact snapshot to Firestore (GitHub Actions path) ──────────────
+    # Requires FIREBASE_SERVICE_ACCOUNT (JSON text) and OWNER_UID in environment.
+    # CF submissions are stripped to keep the Firestore doc well under 1 MB.
+    _push_snapshot_to_firestore(owner_snapshot)
+
+
+def _push_snapshot_to_firestore(owner_snapshot: dict) -> None:
+    """Write a compact version of *owner_snapshot* to Firestore via Admin SDK.
+
+    Activated only when both FIREBASE_SERVICE_ACCOUNT and OWNER_UID are set.
+    Safe to call in any environment – silently skips when credentials are absent.
+    """
+    svc_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT", "").strip()
+    owner_uid = os.environ.get("OWNER_UID", "").strip()
+    if not svc_json or not owner_uid:
+        return  # local run or public-only CI — skip silently
+
+    try:
+        import firebase_admin  # type: ignore
+        from firebase_admin import credentials, firestore as admin_fs  # type: ignore
+    except ImportError:
+        print("WARNING: firebase-admin not installed – skipping Firestore push. "
+              "Add firebase-admin to requirements.txt or run: pip install firebase-admin")
+        return
+
+    # Build the compact snapshot: strip raw CF submissions (huge), keep LC + AC
+    compact: dict = {
+        "updatedAt": owner_snapshot["updatedAt"],
+        "handles": owner_snapshot.get("handles", {}),
+        "leetcode": owner_snapshot.get("leetcode", {}),
+        "codeforces": {
+            "info": (owner_snapshot.get("codeforces") or {}).get("info", {}),
+            "ratingHistory": (owner_snapshot.get("codeforces") or {}).get("ratingHistory", []),
+            "submissions": [],  # omitted — fetched live from CF API in the browser
+        },
+        "atcoder": owner_snapshot.get("atcoder", {}),
+    }
+
+    # Initialise the Admin SDK (guard: may already be initialised in tests)
+    try:
+        app = firebase_admin.get_app()
+    except ValueError:
+        cred = credentials.Certificate(json.loads(svc_json))
+        app = firebase_admin.initialize_app(cred)
+
+    db = admin_fs.client(app)
+    snap_ref = db.collection("cp_pulse_users").document(owner_uid) \
+                  .collection("private").document("snapshot")
+    snap_ref.set(compact)
+    print(f"✓ Owner snapshot pushed to Firestore (uid={owner_uid[:8]}…)")
+
 
 if __name__ == "__main__":
     import argparse
