@@ -1,8 +1,9 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import {
   getAuth,
+  GoogleAuthProvider,
   onAuthStateChanged,
-  signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   type Auth,
   type User,
@@ -56,12 +57,14 @@ export function watchAuth(cb: (user: User | null) => void): () => void {
   return onAuthStateChanged(auth, cb);
 }
 
-export async function ownerSignIn(email: string, password: string): Promise<User> {
+export async function ownerSignInWithGoogle(): Promise<User> {
   if (!auth) throw new Error("Firebase is not configured in .env");
-  const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const cred = await signInWithPopup(auth, provider);
   if (OWNER_EMAIL && cred.user.email?.toLowerCase() !== OWNER_EMAIL) {
     await signOut(auth);
-    throw new Error("This account is not authorized as the repository owner.");
+    throw new Error(`Access denied for ${cred.user.email}. Only the owner (${OWNER_EMAIL}) can sign in.`);
   }
   return cred.user;
 }

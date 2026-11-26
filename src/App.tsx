@@ -16,7 +16,7 @@ import {
   isOwnerUser,
   loadAllProgress,
   loadOwnerSettings,
-  ownerSignIn,
+  ownerSignInWithGoogle,
   ownerSignOut,
   saveOwnerSettings,
   saveProblemProgress,
@@ -347,8 +347,8 @@ export function App() {
       <OwnerLoginModal
         open={loginOpen}
         onClose={() => setLoginOpen(false)}
-        onLogin={async (email, pw) => {
-          await ownerSignIn(email, pw);
+        onGoogleLogin={async () => {
+          await ownerSignInWithGoogle();
         }}
         firebaseConfigured={isFirebaseConfigured}
       />

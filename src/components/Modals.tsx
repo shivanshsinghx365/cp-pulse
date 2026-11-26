@@ -5,27 +5,24 @@ import type { OwnerPrivateSettings } from "../lib/firebase";
 interface LoginModalProps {
   open: boolean;
   onClose: () => void;
-  onLogin: (email: string, password: string) => Promise<void>;
+  onGoogleLogin: () => Promise<void>;
   firebaseConfigured: boolean;
 }
 
-export function OwnerLoginModal({ open, onClose, onLogin, firebaseConfigured }: LoginModalProps) {
-  const [email, setEmail] = useState(import.meta.env.VITE_OWNER_EMAIL || "");
-  const [password, setPassword] = useState("");
+export function OwnerLoginModal({ open, onClose, onGoogleLogin, firebaseConfigured }: LoginModalProps) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (!open) return null;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleGoogle() {
     setErr(null);
     setBusy(true);
     try {
-      await onLogin(email, password);
+      await onGoogleLogin();
       onClose();
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Sign-in failed");
+      setErr(error instanceof Error ? error.message : "Google sign-in failed");
     } finally {
       setBusy(false);
     }
@@ -37,7 +34,7 @@ export function OwnerLoginModal({ open, onClose, onLogin, firebaseConfigured }: 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-white font-semibold text-sm">
             <Lock className="w-4 h-4 text-indigo-400" />
-            <span>Owner Sign In (Private Persistence)</span>
+            <span>Owner Sign In (Google Auth)</span>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white">
             <X className="w-4 h-4" />
@@ -53,37 +50,19 @@ export function OwnerLoginModal({ open, onClose, onLogin, firebaseConfigured }: 
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-xs text-slate-300">Owner Email</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
-                placeholder="you@gmail.com"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs text-slate-300">Password</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-xs px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
-              />
-            </div>
-            {err && <div className="text-xs text-rose-400">{err}</div>}
+          <div className="space-y-3 text-xs">
+            <p className="text-slate-300">
+              Sign in with your owner Google account (<code>{import.meta.env.VITE_OWNER_EMAIL || "owner"}</code>) to unlock Firestore tickmarks, notes, and your private Gemini AI Coach.
+            </p>
+            {err && <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300">{err}</div>}
             <button
-              type="submit"
+              onClick={handleGoogle}
               disabled={busy}
-              className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-60"
+              className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-60"
             >
-              {busy ? "Signing in..." : "Unlock Private Notes & AI Coach"}
+              {busy ? "Signing in with Google..." : "Continue with Google"}
             </button>
-          </form>
+          </div>
         )}
       </div>
     </div>

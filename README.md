@@ -16,9 +16,9 @@ A GitHub Pages–hosted competitive programming analytics & upsolve tracker cove
 ### 1. Create a Firebase Project
 1. Go to [Firebase Console](https://console.firebase.google.com/) → **Add Project** → Register a **Web App**.
 2. Go to **Authentication → Sign-in method**:
-   - Enable **Email/Password**.
-   - Go to **Authentication → Users** → **Add user** (your email + password).
-   - *(Recommended)* In Authentication Settings, disable public user sign-ups if available, and pin your email in `firestore.rules`.
+   - Enable **Google** (one-click OAuth; no password needed!).
+   - Go to **Authentication → Settings → Authorized domains** → click **Add domain** → add `<YOUR_USERNAME>.github.io`.
+   - Pin your verified owner email in `firestore.rules` so no other Google account can ever read or write your Firestore data.
 3. Go to **Firestore Database → Create database** (Production mode).
 4. Paste the rules from `firestore.rules` (replacing `YOUR_OWNER_EMAIL@gmail.com` with your email) and **Publish**.
 
