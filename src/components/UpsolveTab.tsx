@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   ExternalLink,
@@ -6,6 +6,7 @@ import {
   NotebookPen,
   RotateCcw,
   Sparkles,
+  X,
 } from "lucide-react";
 import type {
   ContestQuestion,
@@ -25,11 +26,20 @@ interface Props {
   progress: Record<string, ProblemProgress>;
   isOwner: boolean;
   geminiKey: string;
+  topicJumpFilter: string;
+  onClearTopicJump: () => void;
   onUpdateProgress: (
     key: string,
     patch: Partial<ProblemProgress> & { title: string; platform: Platform; url: string }
   ) => void;
 }
+
+const BUCKET_ACCENT: Record<UpsolveItem["bucket"], string> = {
+  attempted_unsolved: "border-l-2 border-l-rose-500/80",
+  missed_contest: "border-l-2 border-l-amber-500/80",
+  potd_match: "border-l-2 border-l-indigo-500/80",
+  weak_pillar: "border-l-2 border-l-sky-500/70",
+};
 
 export function UpsolveTab({
   potd,
@@ -39,6 +49,8 @@ export function UpsolveTab({
   progress,
   isOwner,
   geminiKey,
+  topicJumpFilter,
+  onClearTopicJump,
   onUpdateProgress,
 }: Props) {
   const [bucket, setBucket] = useState<string>("all");
@@ -49,6 +61,14 @@ export function UpsolveTab({
   const [aiHints, setAiHints] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (topicJumpFilter) {
+      setSearch(topicJumpFilter);
+      setBucket("all");
+      setStatusFilter("open");
+    }
+  }, [topicJumpFilter]);
 
   const weakSet = useMemo(() => new Set(weakTags), [weakTags]);
 
@@ -61,7 +81,7 @@ export function UpsolveTab({
       if (statusFilter === "done" && st !== "done") return false;
       if (statusFilter === "revisit" && st !== "revisit") return false;
       if (q) {
-        const hay = `${item.title} ${item.platform} ${item.tags.join(" ")} ${item.reason}`.toLowerCase();
+        const hay = `${item.slot} ${item.title} ${item.platform} ${item.tags.join(" ")} ${item.reason}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -101,37 +121,36 @@ export function UpsolveTab({
 
   return (
     <div className="space-y-4">
-      {/* POTD Spotlight */}
       {potd?.today && (
-        <div className="bg-gradient-to-r from-indigo-950/60 via-slate-900 to-slate-900 border border-indigo-500/30 rounded-xl p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-300">
-                <Flame className="w-4 h-4 text-amber-400" />
-                <span>Today's LeetCode POTD ({potd.today.date})</span>
+        <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3.5 border-indigo-500/30">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-500 dark:text-indigo-300">
+                <Flame className="w-4 h-4 text-amber-500" />
+                <span>Today&apos;s LeetCode POTD · {potd.today.date}</span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <a
                   href={potd.today.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-base font-bold text-white hover:text-indigo-300 inline-flex items-center gap-1.5"
+                  className="text-base font-bold text-primary-ui hover:text-indigo-500 inline-flex items-center gap-1.5"
                 >
                   {potd.today.id}. {potd.today.title}
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
-                <span className="text-xs px-2 py-0.5 rounded border border-slate-700 bg-slate-950/70 text-slate-200">
+                <span className="pill-inactive text-xs px-2 py-0.5 rounded-md font-medium">
                   {potd.today.difficulty}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <div className="flex flex-wrap gap-1.5">
                 {potd.today.tags.map((t) => (
                   <span
                     key={t}
-                    className={`text-xs px-2 py-0.5 rounded border ${
+                    className={`text-xs px-2 py-0.5 rounded-md border ${
                       weakSet.has(t)
-                        ? "bg-rose-500/15 border-rose-500/30 text-rose-300"
-                        : "bg-slate-950/60 border-slate-800 text-slate-300"
+                        ? "bg-rose-500/15 border-rose-500/30 text-rose-500"
+                        : "pill-inactive"
                     }`}
                   >
                     {t}
@@ -140,7 +159,7 @@ export function UpsolveTab({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {isOwner && geminiKey && (
                 <button
                   onClick={() =>
@@ -154,7 +173,7 @@ export function UpsolveTab({
                     })
                   }
                   disabled={aiLoading === makeProblemKey("LeetCode", potd.today.slug)}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white inline-flex items-center gap-1.5 disabled:opacity-60"
+                  className="text-xs px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   {aiLoading === makeProblemKey("LeetCode", potd.today.slug) ? "Thinking..." : "AI Coach Hint"}
@@ -171,10 +190,10 @@ export function UpsolveTab({
                     url: potd.today.url,
                   });
                 }}
-                className={`text-xs px-3 py-1.5 rounded-lg border inline-flex items-center gap-1.5 ${
+                className={`text-xs px-3.5 py-2 rounded-xl border font-medium inline-flex items-center gap-1.5 transition ${
                   progress[makeProblemKey("LeetCode", potd.today.slug)]?.status === "done"
-                    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
-                    : "bg-slate-950 border-slate-700 text-slate-200 hover:border-slate-500"
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
+                    : "pill-inactive"
                 }`}
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -184,29 +203,34 @@ export function UpsolveTab({
           </div>
 
           {aiHints[makeProblemKey("LeetCode", potd.today.slug)] && (
-            <div className="p-3 rounded-lg bg-slate-950/80 border border-indigo-500/30 text-xs text-slate-200 whitespace-pre-wrap">
+            <div className="surface-inset p-3.5 rounded-xl border-indigo-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
               {aiHints[makeProblemKey("LeetCode", potd.today.slug)]}
             </div>
           )}
 
           {potdFollowUps.length > 0 && (
-            <div className="pt-2 border-t border-slate-800/80">
-              <div className="text-xs text-slate-400 mb-2">
-                Rolling 12-month contest follow-ups sharing today's POTD topics:
+            <div className="pt-2.5 border-t border-slate-300/40 dark:border-slate-800/80">
+              <div className="text-xs text-muted-ui mb-2">
+                Rolling 12-month contest follow-ups sharing today&apos;s POTD topics:
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                 {potdFollowUps.slice(0, 3).map((q) => (
                   <a
-                    key={q.id}
+                    key={`${q.platform}-${q.id}`}
                     href={q.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-indigo-500/50 text-xs flex items-center justify-between gap-2"
+                    className="surface-inset p-2.5 rounded-xl hover:border-indigo-500/50 text-xs flex items-start justify-between gap-2 transition"
                   >
-                    <span className="truncate text-slate-200">
-                      {q.platform} {q.slot} · {q.title}
+                    <div className="min-w-0">
+                      <div className="text-muted-ui font-mono">
+                        {q.platform} · {q.slot}
+                      </div>
+                      <div className="text-primary-ui font-medium line-clamp-2 mt-0.5">{q.title}</div>
+                    </div>
+                    <span className="badge-accent font-mono shrink-0 px-1.5 py-0.5 rounded">
+                      {q.rating ?? q.difficulty}
                     </span>
-                    <span className="font-mono text-indigo-300 shrink-0">{q.rating ?? q.difficulty}</span>
                   </a>
                 ))}
               </div>
@@ -216,29 +240,28 @@ export function UpsolveTab({
       )}
 
       {aiError && (
-        <div className="p-3 rounded-lg bg-rose-500/15 border border-rose-500/30 text-xs text-rose-300">
+        <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-500">
           {aiError}
         </div>
       )}
 
-      {/* Upsolve Controls */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3.5">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
             {[
-              ["all", "All Recommended"],
-              ["attempted_unsolved", "Attempted & Unsolved"],
-              ["missed_contest", "Missed Contest Q3/Q4"],
-              ["potd_match", "POTD Matches"],
-              ["weak_pillar", "12-Mo Gap Drills"],
+              ["all", "All"],
+              ["attempted_unsolved", "Attempted"],
+              ["missed_contest", "Contest Missed"],
+              ["potd_match", "POTD Match"],
+              ["weak_pillar", "Gap Drills"],
             ].map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setBucket(id)}
-                className={`text-xs px-3 py-1.5 rounded-lg border ${
+                className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition ${
                   bucket === id
                     ? "bg-indigo-600 border-indigo-500 text-white"
-                    : "bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-600"
+                    : "pill-inactive"
                 }`}
               >
                 {label}
@@ -247,10 +270,22 @@ export function UpsolveTab({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {topicJumpFilter && (
+              <button
+                onClick={() => {
+                  onClearTopicJump();
+                  setSearch("");
+                }}
+                className="text-xs px-2.5 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-500 inline-flex items-center gap-1"
+              >
+                Topic: {topicJumpFilter} <X className="w-3 h-3" />
+              </button>
+            )}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200"
+              aria-label="Filter by upsolve status"
+              className="input-field text-xs px-2.5 py-1.5 rounded-lg"
             >
               <option value="open">Pending / Revisit</option>
               <option value="revisit">Revisit Only</option>
@@ -261,14 +296,15 @@ export function UpsolveTab({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search upsolve questions"
               placeholder="Search title, tag, platform..."
-              className="text-xs px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 w-52"
+              className="input-field text-xs px-3 py-1.5 rounded-lg w-52"
             />
           </div>
         </div>
 
-        <div className="text-xs text-slate-400">
-          Showing {filtered.length} questions ·{" "}
+        <div className="text-xs text-muted-ui">
+          Showing <span className="font-mono text-primary-ui font-medium">{filtered.length}</span> questions ·{" "}
           {isOwner
             ? "Synced with your private Firebase Firestore (ticks & notes persist across devices)."
             : "Guest session mode (changes are temporary in memory only)."}
@@ -283,42 +319,42 @@ export function UpsolveTab({
             return (
               <div
                 key={item.key}
-                className={`p-3 rounded-xl border transition ${
+                className={`p-3.5 rounded-xl border transition ${BUCKET_ACCENT[item.bucket]} ${
                   st === "done"
-                    ? "bg-emerald-950/20 border-emerald-500/30"
+                    ? "bg-emerald-500/10 border-emerald-500/30"
                     : st === "revisit"
-                    ? "bg-amber-950/20 border-amber-500/30"
-                    : "bg-slate-950/70 border-slate-800"
+                    ? "bg-amber-500/10 border-amber-500/30"
+                    : "surface-inset"
                 }`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="min-w-0 space-y-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="min-w-0 space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300">
+                      <span className="pill-inactive text-xs font-mono px-2 py-0.5 rounded-md">
                         {item.platform} · {item.slot}
                       </span>
                       <a
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-semibold text-white hover:text-indigo-400 inline-flex items-center gap-1"
+                        className="text-sm font-semibold text-primary-ui hover:text-indigo-500 inline-flex items-center gap-1"
                       >
                         {item.title}
                         <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                       </a>
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+                      <span className="badge-accent text-xs font-mono px-2 py-0.5 rounded-md">
                         {item.ratingLabel}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-400">{item.reason}</div>
-                    <div className="flex flex-wrap gap-1 pt-0.5">
+                    <div className="text-xs text-muted-ui">{item.reason}</div>
+                    <div className="flex flex-wrap gap-1">
                       {item.tags.map((t) => (
                         <span
                           key={t}
-                          className={`text-xs px-2 py-0.5 rounded border ${
+                          className={`text-xs px-2 py-0.5 rounded-md border ${
                             weakSet.has(t)
-                              ? "bg-rose-500/15 border-rose-500/30 text-rose-300"
-                              : "bg-slate-900 border-slate-800 text-slate-300"
+                              ? "bg-rose-500/15 border-rose-500/30 text-rose-500"
+                              : "pill-inactive"
                           }`}
                         >
                           {t}
@@ -332,7 +368,7 @@ export function UpsolveTab({
                       <button
                         onClick={() => handleAskGemini(item)}
                         disabled={aiLoading === item.key}
-                        className="text-xs px-2.5 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30 inline-flex items-center gap-1"
+                        className="badge-accent text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 hover:brightness-110"
                       >
                         <Sparkles className="w-3.5 h-3.5" />
                         {aiLoading === item.key ? "..." : "AI Hint"}
@@ -350,8 +386,8 @@ export function UpsolveTab({
                       }}
                       className={`text-xs px-2.5 py-1.5 rounded-lg border inline-flex items-center gap-1 ${
                         p?.note
-                          ? "bg-sky-500/15 border-sky-500/40 text-sky-300"
-                          : "bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500"
+                          ? "bg-sky-500/15 border-sky-500/40 text-sky-500"
+                          : "pill-inactive"
                       }`}
                     >
                       <NotebookPen className="w-3.5 h-3.5" />
@@ -362,10 +398,10 @@ export function UpsolveTab({
                       onClick={() => cycleStatus(item)}
                       className={`text-xs px-2.5 py-1.5 rounded-lg border inline-flex items-center gap-1 ${
                         st === "done"
-                          ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
                           : st === "revisit"
-                          ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
-                          : "bg-slate-900 border-slate-700 text-slate-300 hover:border-slate-500"
+                          ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
+                          : "pill-inactive"
                       }`}
                     >
                       {st === "revisit" ? (
@@ -386,31 +422,31 @@ export function UpsolveTab({
                 </div>
 
                 {p?.note && !isNoteOpen && (
-                  <div className="mt-2 px-3 py-2 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
-                    <span className="text-sky-400 font-medium">Note: </span>
+                  <div className="surface-card mt-2.5 px-3 py-2 rounded-lg text-xs text-secondary-ui">
+                    <span className="text-sky-500 font-medium">Note: </span>
                     {p.note}
                   </div>
                 )}
 
                 {aiHints[item.key] && (
-                  <div className="mt-2 px-3 py-2 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-xs text-slate-200 whitespace-pre-wrap">
+                  <div className="surface-card mt-2.5 px-3 py-2.5 rounded-lg border-indigo-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
                     {aiHints[item.key]}
                   </div>
                 )}
 
                 {isNoteOpen && (
-                  <div className="mt-2.5 space-y-2 pt-2 border-t border-slate-800">
+                  <div className="mt-2.5 space-y-2 pt-2.5 border-t border-slate-300/40 dark:border-slate-800">
                     <textarea
                       rows={3}
                       value={noteDraft}
                       onChange={(e) => setNoteDraft(e.target.value)}
                       placeholder="Write key observation, invariant, or mistake to remember..."
-                      className="w-full text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 focus:outline-none focus:border-indigo-500"
+                      className="input-field w-full text-xs p-2.5 rounded-lg"
                     />
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => setOpenNoteKey(null)}
-                        className="text-xs px-3 py-1 rounded-lg border border-slate-700 text-slate-300"
+                        className="pill-inactive text-xs px-3 py-1 rounded-lg"
                       >
                         Cancel
                       </button>

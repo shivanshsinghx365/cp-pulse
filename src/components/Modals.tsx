@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Lock, Settings, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Lock, Settings, ShieldCheck, X } from "lucide-react";
 import type { OwnerPrivateSettings } from "../lib/firebase";
 
 interface LoginModalProps {
@@ -12,6 +12,15 @@ interface LoginModalProps {
 export function OwnerLoginModal({ open, onClose, onGoogleLogin, firebaseConfigured }: LoginModalProps) {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -29,36 +38,54 @@ export function OwnerLoginModal({ open, onClose, onGoogleLogin, firebaseConfigur
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4">
+    <div
+      className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="owner-signin-title"
+    >
+      <div className="surface-card rounded-2xl max-w-md w-full p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white font-semibold text-sm">
-            <Lock className="w-4 h-4 text-indigo-400" />
-            <span>Owner Sign In (Google Auth)</span>
+          <div className="flex items-center gap-2 text-primary-ui font-semibold text-sm" id="owner-signin-title">
+            <Lock className="w-4 h-4 text-indigo-500" />
+            <span>Owner Sign In</span>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button
+            onClick={onClose}
+            aria-label="Close sign in dialog"
+            className="text-muted-ui hover:text-primary-ui p-1 rounded-lg transition"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {!firebaseConfigured ? (
-          <div className="p-3 rounded-lg bg-amber-500/15 border border-amber-500/30 text-xs text-amber-300 space-y-1.5">
-            <div className="font-semibold">Firebase not configured yet</div>
-            <p>
-              To enable Owner Login &amp; persistent notes, add your <code>VITE_FIREBASE_*</code> and{" "}
-              <code>VITE_OWNER_EMAIL</code> variables (see <code>README.md</code>). Guests can use the app right away without logging in.
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-600 dark:text-amber-200 space-y-1.5">
+            <div className="font-semibold">Firebase not configured</div>
+            <p className="leading-relaxed">
+              Add your <code>VITE_FIREBASE_*</code> and <code>VITE_OWNER_EMAIL</code> variables to enable Owner Login. Guests can analyze handles right away without signing in.
             </p>
           </div>
         ) : (
-          <div className="space-y-3 text-xs">
-            <p className="text-slate-300">
-              Sign in with your owner Google account (<code>{import.meta.env.VITE_OWNER_EMAIL || "owner"}</code>) to unlock Firestore tickmarks, notes, and your private Gemini AI Coach.
-            </p>
-            {err && <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300">{err}</div>}
+          <div className="space-y-4 text-xs">
+            <div className="surface-inset rounded-xl p-3.5 flex items-start gap-2.5 text-secondary-ui leading-relaxed">
+              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <p>
+                Sign in with the repository owner&apos;s Google account to unlock persistent Firestore tickmarks, notes, and your private Gemini AI Coach. Other accounts are rejected automatically.
+              </p>
+            </div>
+            {err && (
+              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-500">
+                {err}
+              </div>
+            )}
             <button
               onClick={handleGoogle}
               disabled={busy}
-              className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-60"
+              className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-60"
             >
               {busy ? "Signing in with Google..." : "Continue with Google"}
             </button>
@@ -84,6 +111,23 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
   const [acHandle, setAcHandle] = useState(settings.acHandle || "shivanshx365");
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    setGeminiKey(settings.geminiKey || "");
+    setTargetCf(String(settings.targetCfRating || 1600));
+    setTargetLc(String(settings.targetLcRating || 2150));
+    setCfHandle(settings.cfHandle || "shivanshx365");
+    setAcHandle(settings.acHandle || "shivanshx365");
+  }, [settings, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   async function handleSave(e: React.FormEvent) {
@@ -104,67 +148,86 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4">
+    <div
+      className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="owner-settings-title"
+    >
+      <div className="surface-card rounded-2xl max-w-md w-full p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white font-semibold text-sm">
-            <Settings className="w-4 h-4 text-indigo-400" />
-            <span>Owner Private Settings (Firestore Only)</span>
+          <div className="flex items-center gap-2 text-primary-ui font-semibold text-sm" id="owner-settings-title">
+            <Settings className="w-4 h-4 text-indigo-500" />
+            <span>Owner Private Settings</span>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button
+            onClick={onClose}
+            aria-label="Close settings dialog"
+            className="text-muted-ui hover:text-primary-ui p-1 rounded-lg transition"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-3 text-xs">
-          <div className="space-y-1">
-            <label className="text-slate-300">Gemini API Key (stored ONLY in your private Firestore doc)</label>
+        <form onSubmit={handleSave} className="space-y-3.5 text-xs">
+          <div className="space-y-1.5">
+            <label htmlFor="gemini-key-input" className="block text-secondary-ui font-medium">
+              Gemini API Key
+            </label>
             <input
+              id="gemini-key-input"
               type="password"
               value={geminiKey}
               onChange={(e) => setGeminiKey(e.target.value)}
               placeholder="AIza..."
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
+              className="input-field w-full px-3 py-2 rounded-xl"
             />
-            <p className="text-slate-400">Never committed to GitHub and never visible to guest users.</p>
+            <p className="text-muted-ui">Stored strictly inside your private Firestore document, never exposed to guests.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-slate-300">CF Handle</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label htmlFor="settings-cf" className="block text-secondary-ui font-medium">CF Handle</label>
               <input
+                id="settings-cf"
                 value={cfHandle}
                 onChange={(e) => setCfHandle(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
+                className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-slate-300">AtCoder Handle</label>
+            <div className="space-y-1.5">
+              <label htmlFor="settings-ac" className="block text-secondary-ui font-medium">AtCoder Handle</label>
               <input
+                id="settings-ac"
                 value={acHandle}
                 onChange={(e) => setAcHandle(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
+                className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <label className="text-slate-300">Target CF Rating</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label htmlFor="settings-tcf" className="block text-secondary-ui font-medium">Target CF Rating</label>
               <input
+                id="settings-tcf"
                 type="number"
                 value={targetCf}
                 onChange={(e) => setTargetCf(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
+                className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-slate-300">Target LC Rating</label>
+            <div className="space-y-1.5">
+              <label htmlFor="settings-tlc" className="block text-secondary-ui font-medium">Target LC Rating</label>
               <input
+                id="settings-tlc"
                 type="number"
                 value={targetLc}
                 onChange={(e) => setTargetLc(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white"
+                className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
           </div>
@@ -172,7 +235,7 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+            className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition disabled:opacity-60"
           >
             {busy ? "Saving..." : "Save to Private Firestore"}
           </button>

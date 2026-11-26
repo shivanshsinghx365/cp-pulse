@@ -1,12 +1,124 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
+  --bg-canvas: #f8fafc;
+  --bg-glow: rgba(99, 102, 241, 0.1);
+  --bg-card: rgba(255, 255, 255, 0.92);
+  --bg-inset: #f1f5f9;
+  --bg-input: #ffffff;
+  --bg-hover: rgba(226, 232, 240, 0.55);
+  --border-subtle: rgba(203, 213, 225, 0.85);
+  --border-strong: rgba(148, 163, 184, 0.65);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --accent: #4f46e5;
+  --accent-soft: rgba(79, 70, 229, 0.1);
+  --accent-border: rgba(79, 70, 229, 0.28);
+  --accent-text: #4338ca;
+  --heat-0-bg: #f1f5f9;
+  --heat-0-text: #94a3b8;
+  --heat-1-bg: rgba(99, 102, 241, 0.14);
+  --heat-1-text: #3730a3;
+  --heat-2-bg: rgba(99, 102, 241, 0.34);
+  --heat-2-text: #1e1b4b;
+  --heat-3-bg: rgba(79, 70, 229, 0.72);
+  --heat-3-text: #ffffff;
+  --heat-4-bg: #4f46e5;
+  --heat-4-text: #ffffff;
+}
+
+html.dark {
   color-scheme: dark;
+  --bg-canvas: #090d16;
+  --bg-glow: rgba(99, 102, 241, 0.15);
+  --bg-card: rgba(15, 22, 35, 0.9);
+  --bg-inset: rgba(9, 14, 24, 0.82);
+  --bg-input: #070b13;
+  --bg-hover: rgba(30, 41, 59, 0.5);
+  --border-subtle: rgba(51, 65, 85, 0.65);
+  --border-strong: rgba(71, 85, 105, 0.8);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.16);
+  --accent-border: rgba(99, 102, 241, 0.35);
+  --accent-text: #a5b4fc;
+  --heat-0-bg: rgba(9, 14, 24, 0.75);
+  --heat-0-text: #64748b;
+  --heat-1-bg: rgba(99, 102, 241, 0.22);
+  --heat-1-text: #c7d2fe;
+  --heat-2-bg: rgba(99, 102, 241, 0.48);
+  --heat-2-text: #eef2ff;
+  --heat-3-bg: rgba(99, 102, 241, 0.76);
+  --heat-3-text: #ffffff;
+  --heat-4-bg: #6366f1;
+  --heat-4-text: #ffffff;
 }
 
 body {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-primary);
+  background:
+    radial-gradient(1200px 520px at 50% -120px, var(--bg-glow), transparent 70%),
+    var(--bg-canvas);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+.font-mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.surface-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 10px 28px -14px rgba(2, 6, 23, 0.22);
+}
+
+.surface-inset {
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+}
+
+.input-field {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.text-primary-ui { color: var(--text-primary); }
+.text-secondary-ui { color: var(--text-secondary); }
+.text-muted-ui { color: var(--text-muted); }
+
+.pill-inactive {
+  background: var(--bg-inset);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.pill-inactive:hover {
+  border-color: var(--border-strong);
+}
+
+.badge-accent {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+}
+
+.heat-0 { background: var(--heat-0-bg); color: var(--heat-0-text); border: 1px solid var(--border-subtle); }
+.heat-1 { background: var(--heat-1-bg); color: var(--heat-1-text); }
+.heat-2 { background: var(--heat-2-bg); color: var(--heat-2-text); font-weight: 500; }
+.heat-3 { background: var(--heat-3-bg); color: var(--heat-3-text); font-weight: 600; }
+.heat-4 { background: var(--heat-4-bg); color: var(--heat-4-text); font-weight: 700; }
 
 ::-webkit-scrollbar {
   width: 7px;
@@ -14,6 +126,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.28);
   border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 import type { ProfileDiagnosis } from "../lib/analyzer";
 import type { OwnerSnapshot } from "../types";
 import type { LiveCfResult } from "../lib/liveApi";
@@ -10,6 +11,7 @@ interface Props {
   isOwner: boolean;
   targetCfRating: number;
   targetLcRating: number;
+  onJumpToTopic: (tag: string) => void;
 }
 
 export function DiagnosisTab({
@@ -19,6 +21,7 @@ export function DiagnosisTab({
   isOwner,
   targetCfRating,
   targetLcRating,
+  onJumpToTopic,
 }: Props) {
   const [tagFilter, setTagFilter] = useState("");
   const rows = diagnosis.cfAudit.filter(
@@ -26,53 +29,52 @@ export function DiagnosisTab({
   );
 
   const badgeClass = (v: string) => {
-    if (v === "Strong") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-    if (v === "Capped") return "bg-amber-500/15 text-amber-400 border-amber-500/30";
-    if (v === "Gap") return "bg-rose-500/15 text-rose-400 border-rose-500/30";
-    return "bg-slate-800 text-slate-400 border-slate-700";
+    if (v === "Strong") return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+    if (v === "Capped") return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30";
+    if (v === "Gap") return "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30";
+    return "pill-inactive";
   };
 
   return (
     <div className="space-y-4">
-      {/* Live Profile KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-1">
-          <div className="text-xs text-slate-400">Codeforces ({cfData?.info.handle || "No handle loaded"})</div>
-          <div className="text-lg font-bold text-white">
+        <div className="surface-card rounded-2xl p-4 space-y-1">
+          <div className="text-xs text-muted-ui">Codeforces ({cfData?.info.handle || "No handle loaded"})</div>
+          <div className="text-xl font-bold text-primary-ui font-mono">
             {cfData?.info.rating ?? "—"}
-            <span className="text-xs font-normal text-slate-400 ml-2">
+            <span className="text-xs font-sans font-normal text-muted-ui ml-2">
               Peak {cfData?.info.maxRating ?? "—"} · Goal {targetCfRating}
             </span>
           </div>
-          <div className="text-xs text-slate-400">
-            {diagnosis.cfSolvedCount} solved · {diagnosis.cfUnsolved.length} attempted &amp; unsolved
+          <div className="text-xs text-muted-ui">
+            {diagnosis.cfSolvedCount} solved · <span className="text-rose-500">{diagnosis.cfUnsolved.length} attempted &amp; unsolved</span>
           </div>
         </div>
 
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-1">
-          <div className="text-xs text-slate-400">AtCoder ABC</div>
-          <div className="text-lg font-bold text-white">
-            {diagnosis.acSolvedCount} ACs
-            <span className="text-xs font-normal text-slate-400 ml-2">
+        <div className="surface-card rounded-2xl p-4 space-y-1">
+          <div className="text-xs text-muted-ui">AtCoder ABC</div>
+          <div className="text-xl font-bold text-primary-ui font-mono">
+            {diagnosis.acSolvedCount} <span className="text-sm font-sans font-semibold">ACs</span>
+            <span className="text-xs font-sans font-normal text-muted-ui ml-2">
               Max diff: {diagnosis.acMaxDiff ?? "—"}
             </span>
           </div>
-          <div className="text-xs text-slate-400">
+          <div className="text-xs text-muted-ui">
             {diagnosis.acUnsolved.length} attempted &amp; unsolved
           </div>
         </div>
 
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-1">
-          <div className="text-xs text-slate-400">
+        <div className="surface-card rounded-2xl p-4 space-y-1">
+          <div className="text-xs text-muted-ui">
             LeetCode {lcData ? "(Synced via Daily Action)" : "(Guest: Clone repo for LC Sync)"}
           </div>
-          <div className="text-lg font-bold text-white">
+          <div className="text-xl font-bold text-primary-ui font-mono">
             {lcData?.ranking ? Math.round(lcData.ranking.rating) : "—"}
-            <span className="text-xs font-normal text-slate-400 ml-2">
+            <span className="text-xs font-sans font-normal text-muted-ui ml-2">
               Goal {targetLcRating} (Guardian)
             </span>
           </div>
-          <div className="text-xs text-slate-400">
+          <div className="text-xs text-muted-ui">
             {lcData?.ranking
               ? `${lcData.ranking.attendedContestsCount} contests · Top ${lcData.ranking.topPercentage}%`
               : isOwner
@@ -82,73 +84,99 @@ export function DiagnosisTab({
         </div>
       </div>
 
-      {/* CF Rating Distribution + Weak Pillars */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
-          <div>
-            <h2 className="text-sm font-semibold text-white">Codeforces Solved Distribution by Rating</h2>
-            <p className="text-xs text-slate-400">
-              Shows where your solved volume drops off before Expert (1600) / CM (1900).
-            </p>
-          </div>
-          <div className="space-y-2">
-            {diagnosis.cfRatingBuckets.length === 0 ? (
-              <div className="text-xs text-slate-400">Load a Codeforces handle to inspect rating distribution.</div>
-            ) : (
-              diagnosis.cfRatingBuckets.map((b) => {
-                const maxC = Math.max(...diagnosis.cfRatingBuckets.map((x) => x.count));
-                const pct = Math.round((100 * b.count) / Math.max(1, maxC));
-                const num = Number(b.label);
-                const col =
-                  num >= 1600 ? "bg-indigo-500" : num >= 1400 ? "bg-cyan-500" : num >= 1200 ? "bg-emerald-500" : "bg-slate-500";
-                return (
-                  <div key={b.label} className="flex items-center gap-2 text-xs">
-                    <span className="w-12 font-mono text-slate-300">{b.label}</span>
-                    <div className="flex-1 h-2.5 rounded-full bg-slate-950 overflow-hidden">
-                      <div className={`h-full rounded-full ${col}`} style={{ width: `${pct}%` }} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+        <div className="surface-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4">
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-sm font-semibold text-primary-ui">Codeforces Solved Distribution by Rating</h2>
+              <p className="text-xs text-muted-ui">
+                Shows where your solved volume drops off before Expert (1600) / CM (1900).
+              </p>
+            </div>
+            <div className="space-y-2">
+              {diagnosis.cfRatingBuckets.length === 0 ? (
+                <div className="text-xs text-muted-ui">Load a Codeforces handle to inspect rating distribution.</div>
+              ) : (
+                diagnosis.cfRatingBuckets.map((b) => {
+                  const maxC = Math.max(...diagnosis.cfRatingBuckets.map((x) => x.count));
+                  const pct = Math.round((100 * b.count) / Math.max(1, maxC));
+                  const num = Number(b.label);
+                  const col =
+                    num >= 1600 ? "bg-indigo-500" : num >= 1400 ? "bg-cyan-500" : num >= 1200 ? "bg-emerald-500" : "bg-slate-400";
+                  return (
+                    <div key={b.label} className="flex items-center gap-2.5 text-xs">
+                      <span className="w-11 font-mono text-secondary-ui">{b.label}</span>
+                      <div className="flex-1 h-2.5 rounded-full surface-inset overflow-hidden">
+                        <div className={`h-full rounded-full ${col}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="w-8 text-right font-mono text-muted-ui">{b.count}</span>
                     </div>
-                    <span className="w-8 text-right font-mono text-slate-400">{b.count}</span>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-300/40 dark:border-slate-800/80 grid grid-cols-3 gap-2 text-xs">
+            <div className="surface-inset rounded-xl p-2.5">
+              <div className="text-muted-ui">Strong Tags</div>
+              <div className="text-base font-bold text-emerald-500 font-mono">
+                {diagnosis.cfAudit.filter((r) => r.verdict === "Strong").length}
+              </div>
+            </div>
+            <div className="surface-inset rounded-xl p-2.5">
+              <div className="text-muted-ui">Capped / Gaps</div>
+              <div className="text-base font-bold text-amber-500 font-mono">
+                {diagnosis.cfAudit.filter((r) => r.verdict === "Gap" || r.verdict === "Capped").length}
+              </div>
+            </div>
+            <div className="surface-inset rounded-xl p-2.5">
+              <div className="text-muted-ui">Untouched</div>
+              <div className="text-base font-bold text-rose-500 font-mono">
+                {diagnosis.cfAudit.filter((r) => r.verdict === "Untouched").length}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
-          <div>
-            <h2 className="text-sm font-semibold text-white">Detected Weak / Capped Topics</h2>
-            <p className="text-xs text-slate-400">
-              Automatically flagged where your AC rate is low, max rating solved is below {targetCfRating}, or high-demand contest tags are untouched.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {diagnosis.weakTags.length === 0 ? (
-              <span className="text-xs text-slate-400">No weak tags flagged yet.</span>
-            ) : (
-              diagnosis.weakTags.map((t) => (
-                <span
-                  key={t}
-                  className="text-xs px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-300 font-medium"
-                >
-                  {t}
-                </span>
-              ))
-            )}
+        <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-4">
+          <div className="space-y-2.5">
+            <div>
+              <h2 className="text-sm font-semibold text-primary-ui">Detected Weak / Capped Topics</h2>
+              <p className="text-xs text-muted-ui">
+                Click any topic chip to jump directly to matching upsolve drills in Tab 1.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {diagnosis.weakTags.length === 0 ? (
+                <span className="text-xs text-muted-ui">No weak tags flagged yet.</span>
+              ) : (
+                diagnosis.weakTags.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => onJumpToTopic(t)}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-rose-500/12 border border-rose-500/30 text-rose-600 dark:text-rose-300 font-medium hover:bg-rose-500/20 transition inline-flex items-center gap-1"
+                  >
+                    <span>{t}</span>
+                    <ArrowUpRight className="w-3 h-3 opacity-80" />
+                  </button>
+                ))
+              )}
+            </div>
           </div>
 
           {lcData && (
-            <div className="pt-3 border-t border-slate-800 space-y-2">
-              <div className="text-xs font-semibold text-slate-200">Recent LeetCode Contests (Last 6 Attended)</div>
+            <div className="pt-3 border-t border-slate-300/40 dark:border-slate-800/80 space-y-2">
+              <div className="text-xs font-semibold text-primary-ui">Recent LeetCode Contests (Last 6 Attended)</div>
               <div className="space-y-1.5">
                 {lcData.contestHistory.slice(-6).reverse().map((h) => (
                   <div
                     key={h.slug}
-                    className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg bg-slate-950/70 border border-slate-800"
+                    className="surface-inset flex items-center justify-between text-xs px-3 py-2 rounded-xl"
                   >
-                    <span className="text-slate-200 truncate">{h.title}</span>
-                    <span className="font-mono text-slate-400 shrink-0">
-                      {h.solved}/{h.total} · Rank {h.ranking} · <span className="text-indigo-400">{h.rating}</span>
+                    <span className="text-primary-ui truncate">{h.title}</span>
+                    <span className="font-mono text-muted-ui shrink-0">
+                      {h.solved}/{h.total} · Rank {h.ranking} · <span className="text-indigo-500 dark:text-indigo-400">{h.rating}</span>
                     </span>
                   </div>
                 ))}
@@ -158,12 +186,11 @@ export function DiagnosisTab({
         </div>
       </div>
 
-      {/* Tag Audit Table */}
-      <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
+      <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold text-white">Tag-by-Tag Codeforces Audit</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-sm font-semibold text-primary-ui">Tag-by-Tag Codeforces Audit</h2>
+            <p className="text-xs text-muted-ui">
               Checks both AC rate and your highest solved rating per topic against your target ({targetCfRating}).
             </p>
           </div>
@@ -171,14 +198,15 @@ export function DiagnosisTab({
             type="text"
             value={tagFilter}
             onChange={(e) => setTagFilter(e.target.value)}
+            aria-label="Filter topic in audit table"
             placeholder="Filter topic..."
-            className="text-xs px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 w-48"
+            className="input-field text-xs px-3 py-1.5 rounded-xl w-52"
           />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-left text-slate-400">
+              <tr className="border-b border-slate-300/50 dark:border-slate-800 text-left text-muted-ui">
                 <th className="py-2 px-2.5">Topic</th>
                 <th className="py-2 px-2.5">Verdict</th>
                 <th className="py-2 px-2.5 text-right">OK</th>
@@ -190,16 +218,16 @@ export function DiagnosisTab({
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.tag} className="border-b border-slate-800/60 hover:bg-slate-950/50">
-                  <td className="py-1.5 px-2.5 font-medium text-slate-200">{r.tag}</td>
-                  <td className="py-1.5 px-2.5">
+                <tr key={r.tag} className="border-b border-slate-300/30 dark:border-slate-800/50 hover:bg-slate-500/5 transition">
+                  <td className="py-2 px-2.5 font-medium text-primary-ui">{r.tag}</td>
+                  <td className="py-2 px-2.5">
                     <span className={`px-2 py-0.5 rounded border ${badgeClass(r.verdict)}`}>{r.verdict}</span>
                   </td>
-                  <td className="py-1.5 px-2.5 text-right font-mono">{r.ok}</td>
-                  <td className="py-1.5 px-2.5 text-right font-mono text-rose-400">{r.fail}</td>
-                  <td className="py-1.5 px-2.5 text-right font-mono">{r.ok + r.fail ? `${r.acRate}%` : "—"}</td>
-                  <td className="py-1.5 px-2.5 text-right font-mono">{r.medRating ?? "—"}</td>
-                  <td className="py-1.5 px-2.5 text-right font-mono">{r.maxRating ?? "—"}</td>
+                  <td className="py-2 px-2.5 text-right font-mono">{r.ok}</td>
+                  <td className="py-2 px-2.5 text-right font-mono text-rose-500">{r.fail}</td>
+                  <td className="py-2 px-2.5 text-right font-mono">{r.ok + r.fail ? `${r.acRate}%` : "—"}</td>
+                  <td className="py-2 px-2.5 text-right font-mono">{r.medRating ?? "—"}</td>
+                  <td className="py-2 px-2.5 text-right font-mono">{r.maxRating ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

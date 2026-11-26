@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { CheckCircle2, ExternalLink, RotateCcw } from "lucide-react";
 import type { ContestRecord, Platform, ProblemProgress } from "../types";
 import { GENERIC_TAGS, makeProblemKey } from "../lib/tags";
@@ -29,10 +29,19 @@ interface Props {
   onToggleStatus: (key: string, meta: { title: string; platform: Platform; url: string }) => void;
 }
 
+function heatClass(pct: number, cnt: number): string {
+  if (cnt === 0) return "heat-0";
+  if (pct >= 45) return "heat-4";
+  if (pct >= 30) return "heat-3";
+  if (pct >= 15) return "heat-2";
+  return "heat-1";
+}
+
 export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Props) {
   const [tierId, setTierId] = useState("LC_ALL");
   const [hideGeneric, setHideGeneric] = useState(true);
   const [drill, setDrill] = useState<{ slot: string; tag: string } | null>(null);
+  const drillRef = useRef<HTMLDivElement | null>(null);
 
   const def = TIER_DEFS.find((t) => t.id === tierId) || TIER_DEFS[0];
   const weakSet = useMemo(() => new Set(weakTags), [weakTags]);
@@ -67,7 +76,7 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
         count: qs.length,
         tagCounts: tc,
         medRating,
-        topDiff: topD ? `${topD[0]} (${Math.round((100 * topD[1]) / Math.max(1, qs.length))}%)` : "",
+        topDiff: topD ? `${topD[0]} ${Math.round((100 * topD[1]) / Math.max(1, qs.length))}%` : "",
       };
     }
 
@@ -90,9 +99,23 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
       .sort((a, b) => b.startTime - a.startTime);
   }, [filteredProbs, drill]);
 
+  const slotGridCols =
+    def.slots.length === 4
+      ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+      : def.slots.length <= 7
+      ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-7"
+      : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8";
+
+  function handleCellClick(slot: string, tag: string) {
+    setDrill({ slot, tag });
+    if (window.innerWidth < 1024) {
+      setTimeout(() => drillRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
+      <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-1.5">
             {TIER_DEFS.map((t) => (
@@ -104,52 +127,51 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                 }}
                 className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition ${
                   tierId === t.id
-                    ? "bg-indigo-600 border-indigo-500 text-white"
-                    : "bg-slate-950/60 border-slate-800 text-slate-300 hover:border-slate-600"
+                    ? "bg-indigo-600 border-indigo-500 text-white shadow-sm"
+                    : "pill-inactive"
                 }`}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <label className="inline-flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+          <label className="inline-flex items-center gap-2 text-xs text-secondary-ui cursor-pointer select-none">
             <input
               type="checkbox"
               checked={hideGeneric}
               onChange={(e) => setHideGeneric(e.target.checked)}
               className="accent-indigo-500"
             />
-            Focus algorithmic tags (hide generic Array / Implementation)
+            Focus algorithmic tags (hide Array / Impl)
           </label>
         </div>
 
-        {/* Slot cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+        <div className={`grid ${slotGridCols} gap-2.5`}>
           {def.slots.map((sl) => {
             const sd = slotStats[sl];
             const top3 = Object.entries(sd.tagCounts)
               .sort((a, b) => b[1] - a[1])
               .slice(0, 3);
             return (
-              <div key={sl} className="bg-slate-950/70 border border-slate-800 rounded-lg p-3 space-y-1">
+              <div key={sl} className="surface-inset rounded-xl p-3.5 space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-white">{sl}</span>
-                  <span className="text-xs text-slate-400">n={sd.count}</span>
+                  <span className="font-bold text-sm text-primary-ui">{sl}</span>
+                  <span className="text-xs font-mono text-muted-ui">n={sd.count}</span>
                 </div>
-                <div className="text-xs text-indigo-400 font-medium">
+                <div className="text-xs text-indigo-500 dark:text-indigo-400 font-medium whitespace-nowrap truncate">
                   {def.plat === "LeetCode"
                     ? `${sd.topDiff}${sd.medRating ? ` · ~${sd.medRating}` : ""}`
                     : sd.medRating !== null
                     ? `Median ~${sd.medRating}`
                     : "Unrated"}
                 </div>
-                <div className="space-y-0.5 pt-1">
+                <div className="space-y-1 pt-1.5 border-t border-slate-300/40 dark:border-slate-800/70">
                   {top3.map(([t, c]) => (
-                    <div key={t} className="flex justify-between text-xs gap-1">
-                      <span className={`truncate ${weakSet.has(t) ? "text-rose-400" : "text-slate-300"}`}>
+                    <div key={t} className="flex justify-between items-center text-xs gap-2">
+                      <span className={`truncate ${weakSet.has(t) ? "text-rose-500 font-medium" : "text-secondary-ui"}`}>
                         {t}
                       </span>
-                      <span className="font-mono text-slate-400 shrink-0">
+                      <span className="font-mono text-muted-ui shrink-0">
                         {Math.round((100 * c) / Math.max(1, sd.count))}%
                       </span>
                     </div>
@@ -161,20 +183,30 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 bg-slate-900/70 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-          <div className="mb-3">
-            <h2 className="text-sm font-semibold text-white">Rolling 12-Month Topic × Question Slot Heatmap</h2>
-            <p className="text-xs text-slate-400">
-              Red badges indicate your current gap/capped topics. Click any cell to drill down and tick off problems.
-            </p>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)] gap-4 items-start">
+        <div className="surface-card rounded-2xl p-4 sm:p-5 overflow-x-auto">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 className="text-sm font-semibold text-primary-ui">Rolling 12-Month Topic × Question Slot Heatmap</h2>
+              <p className="text-xs text-muted-ui">Click any cell to inspect problems and tick off upsolves.</p>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-ui">
+              <span>0%</span>
+              <span className="w-3.5 h-3 rounded heat-0" />
+              <span className="w-3.5 h-3 rounded heat-1" />
+              <span className="w-3.5 h-3 rounded heat-2" />
+              <span className="w-3.5 h-3 rounded heat-3" />
+              <span className="w-3.5 h-3 rounded heat-4" />
+              <span>45%+</span>
+            </div>
           </div>
+
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 text-left">
-                <th className="py-2 px-2.5 text-slate-400 font-semibold">Topic</th>
+              <tr className="border-b border-slate-300/50 dark:border-slate-800 text-left">
+                <th className="py-2 pr-3 text-muted-ui font-semibold w-52">Topic</th>
                 {def.slots.map((sl) => (
-                  <th key={sl} className="py-2 px-2 text-center font-semibold text-slate-200 min-w-[58px]">
+                  <th key={sl} className="py-2 px-1 text-center font-semibold text-primary-ui min-w-[54px]">
                     {sl}
                   </th>
                 ))}
@@ -182,29 +214,29 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
             </thead>
             <tbody>
               {rowTags.map((tag) => (
-                <tr key={tag} className="border-b border-slate-800/60">
-                  <td className="py-1.5 px-2.5 font-medium whitespace-nowrap text-slate-200">
-                    {tag}
-                    {weakSet.has(tag) && (
-                      <span className="ml-1.5 px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                        Gap
-                      </span>
-                    )}
+                <tr key={tag} className="border-b border-slate-300/30 dark:border-slate-800/50">
+                  <td className="py-1.5 pr-3 font-medium whitespace-nowrap text-primary-ui max-w-[220px]">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate">{tag}</span>
+                      {weakSet.has(tag) && (
+                        <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 border border-rose-500/30 shrink-0">
+                          Gap
+                        </span>
+                      )}
+                    </div>
                   </td>
                   {def.slots.map((sl) => {
                     const n = slotStats[sl].count;
                     const cnt = slotStats[sl].tagCounts[tag] || 0;
                     const pct = n ? Math.round((100 * cnt) / n) : 0;
-                    const alpha = cnt === 0 ? 0.04 : Math.min(0.9, 0.12 + (pct / 70) * 0.78);
                     const active = drill?.slot === sl && drill?.tag === tag;
                     return (
                       <td key={sl} className="p-1 text-center">
                         <button
-                          onClick={() => setDrill({ slot: sl, tag })}
-                          style={{ backgroundColor: `rgba(99, 102, 241, ${alpha.toFixed(2)})` }}
-                          className={`w-full py-1.5 rounded transition ${
-                            pct >= 40 ? "text-white font-bold" : cnt > 0 ? "text-slate-100" : "text-slate-500"
-                          } ${active ? "ring-2 ring-amber-400" : "hover:brightness-110"}`}
+                          onClick={() => handleCellClick(sl, tag)}
+                          className={`w-full py-1.5 rounded-md font-mono transition ${heatClass(pct, cnt)} ${
+                            active ? "ring-2 ring-amber-400" : "hover:brightness-110"
+                          }`}
                           title={`${tag} in ${sl}: ${cnt}/${n} (${pct}%)`}
                         >
                           {pct}%
@@ -218,38 +250,38 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
           </table>
         </div>
 
-        <div className="bg-slate-900/70 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div ref={drillRef} className="surface-card rounded-2xl p-4 sm:p-5 space-y-3 lg:sticky lg:top-4">
           <div>
-            <h3 className="text-sm font-semibold text-white">
-              {drill ? `${def.label} · ${drill.slot} · ${drill.tag}` : "Click any heatmap cell"}
+            <h3 className="text-sm font-semibold text-primary-ui">
+              {drill ? `${def.label} · ${drill.slot} · ${drill.tag}` : "Problem Drill-Down"}
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-ui">
               {drill
                 ? `${drillProbs.length} matching problems in the past 12 months`
-                : "Inspect problems and mark your upsolve progress."}
+                : "Click any cell in the heatmap to list matching questions here."}
             </p>
           </div>
-          <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
             {drillProbs.map((q) => {
               const pKey = makeProblemKey(q.platform, q.id);
               const st = progress[pKey]?.status || "todo";
               return (
                 <div
                   key={pKey}
-                  className="p-2.5 rounded-lg bg-slate-950/70 border border-slate-800 flex items-start justify-between gap-2"
+                  className="surface-inset p-3 rounded-xl flex items-start justify-between gap-2.5 transition"
                 >
                   <div className="min-w-0">
                     <a
                       href={q.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium text-slate-100 hover:text-indigo-400 inline-flex items-center gap-1 truncate max-w-full"
+                      className="text-xs font-medium text-primary-ui hover:text-indigo-500 inline-flex items-center gap-1 max-w-full"
                     >
                       <span className="truncate">{q.title}</span>
                       <ExternalLink className="w-3 h-3 shrink-0" />
                     </a>
-                    <div className="text-xs text-slate-400 mt-0.5">
-                      {q.contestTitle} · {q.dateStr} · {q.rating ?? q.difficulty}
+                    <div className="text-xs text-muted-ui mt-0.5">
+                      {q.contestTitle} · {q.dateStr} · <span className="font-mono text-indigo-500 dark:text-indigo-300">{q.rating ?? q.difficulty}</span>
                     </div>
                   </div>
                   <button
@@ -257,12 +289,13 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                       onToggleStatus(pKey, { title: q.title, platform: q.platform, url: q.url })
                     }
                     title="Toggle status (Todo -> Done -> Revisit)"
-                    className={`shrink-0 p-1.5 rounded-lg border text-xs ${
+                    aria-label={`Toggle status for ${q.title}`}
+                    className={`shrink-0 p-1.5 rounded-lg border text-xs transition ${
                       st === "done"
-                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
+                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
                         : st === "revisit"
-                        ? "bg-amber-500/15 border-amber-500/40 text-amber-400"
-                        : "bg-slate-900 border-slate-700 text-slate-400 hover:text-white"
+                        ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
+                        : "pill-inactive"
                     }`}
                   >
                     {st === "revisit" ? <RotateCcw className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}

@@ -24,6 +24,17 @@ export interface RawCompactContests {
   ][];
 }
 
+function uniq(arr: string[]): string[] {
+  return Array.from(new Set(arr.filter(Boolean)));
+}
+
+function formatAtCoderTitle(pid: string, knownTitle?: string): string {
+  if (knownTitle) return knownTitle;
+  const m = pid.match(/^([a-z]+)(\d+)_([a-z0-9]+)$/i);
+  if (m) return `${m[1].toUpperCase()} ${m[2]} · Problem ${m[3].toUpperCase()}`;
+  return pid;
+}
+
 export function unpackContests(raw: RawCompactContests): ContestRecord[] {
   return raw.contests.map(([platform, tier, id, title, startTime, qs]) => {
     const dateStr = new Date(startTime * 1000).toISOString().slice(0, 10);
@@ -52,7 +63,7 @@ export function unpackContests(raw: RawCompactContests): ContestRecord[] {
           title: qTitle,
           difficulty,
           rating,
-          tags: tagIds.map((i) => raw.tags[i]).filter(Boolean),
+          tags: uniq(tagIds.map((i) => raw.tags[i])),
           url,
           src,
         };
@@ -113,7 +124,7 @@ export function analyzeProfile(
         idx: p.index,
         name: p.name,
         rating: p.rating ?? null,
-        tags: (p.tags || []).map(mapCfTag),
+        tags: uniq((p.tags || []).map(mapCfTag)),
         ok: false,
         verdicts: {},
         ts: s.creationTimeSeconds,
@@ -135,13 +146,13 @@ export function analyzeProfile(
     if (item.ok) {
       cfSolvedCount++;
       if (item.rating) cfRatingCount.set(item.rating, (cfRatingCount.get(item.rating) || 0) + 1);
-      for (const t of new Set(item.tags)) {
+      for (const t of item.tags) {
         const arr = okByTag.get(t) || [];
         if (item.rating) arr.push(item.rating);
         okByTag.set(t, arr);
       }
     } else {
-      for (const t of new Set(item.tags)) {
+      for (const t of item.tags) {
         failByTag.set(t, (failByTag.get(t) || 0) + 1);
       }
       const vStr = Object.entries(item.verdicts)
@@ -150,8 +161,8 @@ export function analyzeProfile(
       cfUnsolved.push({
         key: makeProblemKey("Codeforces", id),
         platform: "Codeforces",
-        slot: item.idx,
-        title: `${id} · ${item.name}`,
+        slot: `${item.cid}${item.idx}`,
+        title: item.name,
         url: `https://codeforces.com/contest/${item.cid}/problem/${item.idx}`,
         ratingLabel: item.rating ? `CF ${item.rating}` : "Unrated",
         numericRating: item.rating,
@@ -196,7 +207,6 @@ export function analyzeProfile(
   const cfAudit: TagAuditRow[] = allAuditTags
     .map((tag) => {
       const ratings = (okByTag.get(tag) || []).slice().sort((a, b) => a - b);
-      // Note: ok count includes unrated solves too, track via ratings + count
       let okTotal = 0;
       for (const item of cfProbMap.values()) {
         if (item.ok && item.tags.includes(tag)) okTotal++;
@@ -217,7 +227,6 @@ export function analyzeProfile(
     .filter((r) => coreTags.includes(r.tag) || r.ok + r.fail > 0)
     .sort((a, b) => b.ok + b.fail - (a.ok + a.fail));
 
-  // Weak tags prioritize Gaps, Capped below target, and Untouched high-demand topics
   const highDemandSet = new Set([
     "Dynamic Programming",
     "Greedy",
@@ -268,15 +277,16 @@ export function analyzeProfile(
         acMaxDiff = acMaxDiff === null ? q.rating : Math.max(acMaxDiff, q.rating);
       }
     } else {
+      const slotLbl = `${info.cid.toUpperCase()} ${pid.split("_").pop()?.toUpperCase() || "?"}`;
       acUnsolved.push({
         key: makeProblemKey("AtCoder", pid),
         platform: "AtCoder",
-        slot: pid.split("_").pop()?.toUpperCase() || "?",
-        title: q ? `${pid} · ${q.title}` : pid,
+        slot: slotLbl,
+        title: formatAtCoderTitle(pid, q?.title),
         url: `https://atcoder.jp/contests/${info.cid}/tasks/${pid}`,
         ratingLabel: q?.rating !== null && q?.rating !== undefined ? `AC ${q.rating}` : "AtCoder",
         numericRating: q?.rating ?? null,
-        tags: q?.tags || ["Combinatorics & Counting"],
+        tags: uniq(q?.tags || ["Combinatorics & Counting"]),
         reason: `Attempted on AtCoder (${info.lastRes})`,
         priorityScore: 95,
         bucket: "attempted_unsolved",
@@ -302,14 +312,13 @@ export function analyzeProfile(
     url: m.url,
     ratingLabel: m.rating ? `LC ${m.rating}` : m.difficulty,
     numericRating: m.rating,
-    tags: m.tags,
+    tags: uniq(m.tags),
     reason: m.reason,
     priorityScore: m.slot === "Q3" ? 94 : 88,
     bucket: "missed_contest",
     ts: m.ts,
   }));
 
-  // POTD follow-up matches from rolling 1-year window
   const potdFollowUps = potd
     ? allQuestions
         .filter(
@@ -327,19 +336,18 @@ export function analyzeProfile(
   const potdMatchItems: UpsolveItem[] = potdFollowUps.map((q) => ({
     key: makeProblemKey(q.platform, q.id),
     platform: q.platform,
-    slot: q.slot,
+    slot: q.platform === "Codeforces" ? `${q.contestId}${q.rawIndex}` : q.platform === "AtCoder" ? `${q.contestId.toUpperCase()} ${q.slot}` : q.slot,
     title: q.title,
     url: q.url,
     ratingLabel: q.rating !== null ? `${q.platform === "LeetCode" ? "LC" : q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}` : q.difficulty,
     numericRating: q.rating,
-    tags: q.tags,
+    tags: uniq(q.tags),
     reason: `Matches today's POTD (${potd?.today.title})`,
     priorityScore: 84,
     bucket: "potd_match",
     ts: q.startTime,
   }));
 
-  // Rolling 1-year weak-pillar problems (excluding already solved on CF/AC)
   const weakPillarItems: UpsolveItem[] = [];
   for (const q of allQuestions.slice().sort((a, b) => b.startTime - a.startTime)) {
     if (q.platform === "Codeforces" && cfProbMap.get(q.id)?.ok) continue;
@@ -357,12 +365,12 @@ export function analyzeProfile(
     weakPillarItems.push({
       key: makeProblemKey(q.platform, q.id),
       platform: q.platform,
-      slot: q.slot,
+      slot: q.platform === "Codeforces" ? `${q.contestId}${q.rawIndex}` : q.platform === "AtCoder" ? `${q.contestId.toUpperCase()} ${q.slot}` : q.slot,
       title: q.title,
       url: q.url,
       ratingLabel: q.rating !== null ? `${q.platform === "LeetCode" ? "LC" : q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}` : q.difficulty,
       numericRating: q.rating,
-      tags: q.tags,
+      tags: uniq(q.tags),
       reason: `Targets gap: ${hits.slice(0, 2).join(", ")}`,
       priorityScore: 70 + hits.length * 6,
       bucket: "weak_pillar",
@@ -371,7 +379,6 @@ export function analyzeProfile(
     if (weakPillarItems.length >= 60) break;
   }
 
-  // Deduplicate by key preserving highest priority
   const dedup = new Map<string, UpsolveItem>();
   for (const item of [...cfUnsolved, ...acUnsolved, ...lcMissedItems, ...potdMatchItems, ...weakPillarItems]) {
     const prev = dedup.get(item.key);
