@@ -35,10 +35,10 @@ interface Props {
 }
 
 const BUCKET_ACCENT: Record<UpsolveItem["bucket"], string> = {
-  attempted_unsolved: "border-l-2 border-l-rose-500/80",
-  missed_contest: "border-l-2 border-l-amber-500/80",
-  potd_match: "border-l-2 border-l-indigo-500/80",
-  weak_pillar: "border-l-2 border-l-sky-500/70",
+  attempted_unsolved: "border-l-2 border-l-[#d96c52]",
+  missed_contest: "border-l-2 border-l-amber-500/75",
+  potd_match: "border-l-2 border-l-sky-500/80",
+  weak_pillar: "border-l-2 border-l-teal-500/70",
 };
 
 export function UpsolveTab({
@@ -122,10 +122,10 @@ export function UpsolveTab({
   return (
     <div className="space-y-4">
       {potd?.today && (
-        <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3.5 border-indigo-500/30">
+        <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3.5 border-sky-500/25">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-500 dark:text-indigo-300">
+              <div className="flex items-center gap-2 text-xs font-semibold text-accent-ui">
                 <Flame className="w-4 h-4 text-amber-500" />
                 <span>Today&apos;s LeetCode POTD · {potd.today.date}</span>
               </div>
@@ -134,7 +134,7 @@ export function UpsolveTab({
                   href={potd.today.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-base font-bold text-primary-ui hover:text-indigo-500 inline-flex items-center gap-1.5"
+                  className="text-base font-bold text-primary-ui hover:text-accent-ui inline-flex items-center gap-1.5"
                 >
                   {potd.today.id}. {potd.today.title}
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -149,7 +149,7 @@ export function UpsolveTab({
                     key={t}
                     className={`text-xs px-2 py-0.5 rounded-md border ${
                       weakSet.has(t)
-                        ? "bg-rose-500/15 border-rose-500/30 text-rose-500"
+                        ? "badge-gap"
                         : "pill-inactive"
                     }`}
                   >
@@ -173,7 +173,7 @@ export function UpsolveTab({
                     })
                   }
                   disabled={aiLoading === makeProblemKey("LeetCode", potd.today.slug)}
-                  className="text-xs px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
+                  className="btn-primary text-xs px-3 py-2 rounded-xl font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   {aiLoading === makeProblemKey("LeetCode", potd.today.slug) ? "Thinking..." : "AI Coach Hint"}
@@ -192,7 +192,7 @@ export function UpsolveTab({
                 }}
                 className={`text-xs px-3.5 py-2 rounded-xl border font-medium inline-flex items-center gap-1.5 transition ${
                   progress[makeProblemKey("LeetCode", potd.today.slug)]?.status === "done"
-                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
+                    ? "badge-ok"
                     : "pill-inactive"
                 }`}
               >
@@ -203,7 +203,7 @@ export function UpsolveTab({
           </div>
 
           {aiHints[makeProblemKey("LeetCode", potd.today.slug)] && (
-            <div className="surface-inset p-3.5 rounded-xl border-indigo-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
+            <div className="surface-inset p-3.5 rounded-xl border-sky-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
               {aiHints[makeProblemKey("LeetCode", potd.today.slug)]}
             </div>
           )}
@@ -220,7 +220,7 @@ export function UpsolveTab({
                     href={q.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="surface-inset p-2.5 rounded-xl hover:border-indigo-500/50 text-xs flex items-start justify-between gap-2 transition"
+                    className="surface-inset p-2.5 rounded-xl hover:border-sky-500/50 text-xs flex items-start justify-between gap-2 transition"
                   >
                     <div className="min-w-0">
                       <div className="text-muted-ui font-mono">
@@ -240,7 +240,7 @@ export function UpsolveTab({
       )}
 
       {aiError && (
-        <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-500">
+        <div className="badge-gap p-3 rounded-xl text-xs">
           {aiError}
         </div>
       )}
@@ -260,7 +260,7 @@ export function UpsolveTab({
                 onClick={() => setBucket(id)}
                 className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition ${
                   bucket === id
-                    ? "bg-indigo-600 border-indigo-500 text-white"
+                    ? "btn-primary"
                     : "pill-inactive"
                 }`}
               >
@@ -276,7 +276,7 @@ export function UpsolveTab({
                   onClearTopicJump();
                   setSearch("");
                 }}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-500 inline-flex items-center gap-1"
+                className="badge-accent text-xs px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1"
               >
                 Topic: {topicJumpFilter} <X className="w-3 h-3" />
               </button>
@@ -321,9 +321,9 @@ export function UpsolveTab({
                 key={item.key}
                 className={`p-3.5 rounded-xl border transition ${BUCKET_ACCENT[item.bucket]} ${
                   st === "done"
-                    ? "bg-emerald-500/10 border-emerald-500/30"
+                    ? "badge-ok"
                     : st === "revisit"
-                    ? "bg-amber-500/10 border-amber-500/30"
+                    ? "badge-warn"
                     : "surface-inset"
                 }`}
               >
@@ -337,7 +337,7 @@ export function UpsolveTab({
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-semibold text-primary-ui hover:text-indigo-500 inline-flex items-center gap-1"
+                        className="text-sm font-semibold text-primary-ui hover:text-accent-ui inline-flex items-center gap-1"
                       >
                         {item.title}
                         <ExternalLink className="w-3.5 h-3.5 shrink-0" />
@@ -353,7 +353,7 @@ export function UpsolveTab({
                           key={t}
                           className={`text-xs px-2 py-0.5 rounded-md border ${
                             weakSet.has(t)
-                              ? "bg-rose-500/15 border-rose-500/30 text-rose-500"
+                              ? "badge-gap"
                               : "pill-inactive"
                           }`}
                         >
@@ -386,7 +386,7 @@ export function UpsolveTab({
                       }}
                       className={`text-xs px-2.5 py-1.5 rounded-lg border inline-flex items-center gap-1 ${
                         p?.note
-                          ? "bg-sky-500/15 border-sky-500/40 text-sky-500"
+                          ? "badge-accent"
                           : "pill-inactive"
                       }`}
                     >
@@ -398,9 +398,9 @@ export function UpsolveTab({
                       onClick={() => cycleStatus(item)}
                       className={`text-xs px-2.5 py-1.5 rounded-lg border inline-flex items-center gap-1 ${
                         st === "done"
-                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
+                          ? "badge-ok"
                           : st === "revisit"
-                          ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
+                          ? "badge-warn"
                           : "pill-inactive"
                       }`}
                     >
@@ -423,13 +423,13 @@ export function UpsolveTab({
 
                 {p?.note && !isNoteOpen && (
                   <div className="surface-card mt-2.5 px-3 py-2 rounded-lg text-xs text-secondary-ui">
-                    <span className="text-sky-500 font-medium">Note: </span>
+                    <span className="text-accent-ui font-medium">Note: </span>
                     {p.note}
                   </div>
                 )}
 
                 {aiHints[item.key] && (
-                  <div className="surface-card mt-2.5 px-3 py-2.5 rounded-lg border-indigo-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
+                  <div className="surface-card mt-2.5 px-3 py-2.5 rounded-lg border-sky-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
                     {aiHints[item.key]}
                   </div>
                 )}
@@ -460,7 +460,7 @@ export function UpsolveTab({
                           });
                           setOpenNoteKey(null);
                         }}
-                        className="text-xs px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white"
+                        className="btn-primary text-xs px-3 py-1 rounded-lg"
                       >
                         Save Note
                       </button>

@@ -50,7 +50,7 @@ export function OwnerLoginModal({ open, onClose, onGoogleLogin, firebaseConfigur
       <div className="surface-card rounded-2xl max-w-md w-full p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-primary-ui font-semibold text-sm" id="owner-signin-title">
-            <Lock className="w-4 h-4 text-indigo-500" />
+            <Lock className="w-4 h-4 text-accent-ui" />
             <span>Owner Sign In</span>
           </div>
           <button
@@ -63,7 +63,7 @@ export function OwnerLoginModal({ open, onClose, onGoogleLogin, firebaseConfigur
         </div>
 
         {!firebaseConfigured ? (
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-600 dark:text-amber-200 space-y-1.5">
+          <div className="badge-warn p-3.5 rounded-xl text-xs space-y-1.5">
             <div className="font-semibold">Firebase not configured</div>
             <p className="leading-relaxed">
               Add your <code>VITE_FIREBASE_*</code> and <code>VITE_OWNER_EMAIL</code> variables to enable Owner Login. Guests can analyze handles right away without signing in.
@@ -72,20 +72,20 @@ export function OwnerLoginModal({ open, onClose, onGoogleLogin, firebaseConfigur
         ) : (
           <div className="space-y-4 text-xs">
             <div className="surface-inset rounded-xl p-3.5 flex items-start gap-2.5 text-secondary-ui leading-relaxed">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <ShieldCheck className="w-4 h-4 text-ok-ui shrink-0 mt-0.5" />
               <p>
                 Sign in with the repository owner&apos;s Google account to unlock persistent Firestore tickmarks, notes, and your private Gemini AI Coach. Other accounts are rejected automatically.
               </p>
             </div>
             {err && (
-              <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-500">
+              <div className="badge-gap p-3 rounded-xl">
                 {err}
               </div>
             )}
             <button
               onClick={handleGoogle}
               disabled={busy}
-              className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition disabled:opacity-60"
+              className="btn-primary w-full py-2.5 px-4 rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-60"
             >
               {busy ? "Signing in with Google..." : "Continue with Google"}
             </button>
@@ -160,7 +160,7 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
       <div className="surface-card rounded-2xl max-w-md w-full p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-primary-ui font-semibold text-sm" id="owner-settings-title">
-            <Settings className="w-4 h-4 text-indigo-500" />
+            <Settings className="w-4 h-4 text-accent-ui" />
             <span>Owner Private Settings</span>
           </div>
           <button
@@ -235,7 +235,7 @@ export function OwnerSettingsModal({ open, onClose, settings, onSave }: Settings
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition disabled:opacity-60"
+            className="btn-primary w-full py-2.5 rounded-xl font-semibold transition disabled:opacity-60"
           >
             {busy ? "Saving..." : "Save to Private Firestore"}
           </button>

@@ -47,22 +47,49 @@ type TabId = "upsolve" | "diagnosis" | "heatmap";
 
 const QUOTES = [
   {
-    text: "Ad-hoc gets you into the room; structured upsolving is what turns consistency into Guardian and Candidate Master.",
-    author: "Daily Training Principle",
+    text: "Consistency usually beats intensity. One honest upsolve a day adds up quietly over a year.",
+    author: "Daily Practice",
   },
   {
-    text: "Every unsolved WA in your contest history is a blueprint of the next rating jump waiting to be claimed.",
-    author: "Contest Upsolve Rule",
+    text: "Every wrong answer narrows down what to learn next. Treat missed contest problems as free feedback.",
+    author: "Contest Review",
   },
   {
-    text: "You do not rise to the level of your peak contest; you fall to the level of your weakest core topic under clock pressure.",
-    author: "Competitive Mastery",
+    text: "Progress is rarely loud — it shows up weeks later when an unfamiliar idea starts feeling routine.",
+    author: "Long-Term Craft",
   },
   {
-    text: "Solve the problem you avoided yesterday. Comfort builds speed; discomfort builds ceiling.",
-    author: "Deliberate Practice",
+    text: "Pick one topic at a time, understand why an invariant holds, and move forward at your own pace.",
+    author: "Deliberate Study",
+  },
+  {
+    text: "Reading an editorial after a real attempt teaches twice as much as rushing straight to the next problem.",
+    author: "Upsolving Habit",
+  },
+  {
+    text: "Small blind spots disappear fast once you start writing down what tripped you up.",
+    author: "Reflection",
+  },
+  {
+    text: "Stay patient with hard problems; even 20 minutes of stuck thinking reshapes how you notice patterns.",
+    author: "Problem Solving",
+  },
+  {
+    text: "You do not need to solve everything today — only keep showing up for the next step.",
+    author: "Steady Growth",
   },
 ];
+
+function pickDailyQuoteIndex(): number {
+  const now = new Date();
+  const key = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash) % QUOTES.length;
+}
 
 export function App() {
   const [tab, setTab] = useState<TabId>("upsolve");
@@ -70,7 +97,7 @@ export function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     return localStorage.getItem("cp_pulse_theme") === "light" ? "light" : "dark";
   });
-  const [quoteIdx, setQuoteIdx] = useState(() => new Date().getDate() % QUOTES.length);
+  const quoteIdx = useMemo(() => pickDailyQuoteIndex(), []);
 
   const [contests, setContests] = useState<ContestRecord[]>([]);
   const [potd, setPotd] = useState<PotdPayload | null>(null);
@@ -220,7 +247,7 @@ export function App() {
         {/* Top Bar */}
         <header className="surface-card rounded-2xl px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl bg-indigo-600/15 border border-indigo-500/35 flex items-center justify-center text-indigo-500">
+            <span className="w-8 h-8 rounded-xl badge-accent flex items-center justify-center">
               <Zap className="w-4 h-4" />
             </span>
             <div>
@@ -230,7 +257,7 @@ export function App() {
                   12-Mo · {contests.length} Contests
                 </span>
                 {isOwner ? (
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 inline-flex items-center gap-1">
+                  <span className="badge-ok text-xs px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
                     <UserCheck className="w-3 h-3" /> Owner Synced
                   </span>
                 ) : (
@@ -249,7 +276,7 @@ export function App() {
               title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
               className="pill-inactive text-xs px-3 py-2 rounded-xl inline-flex items-center gap-1.5 transition"
             >
-              {theme === "dark" ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
+              {theme === "dark" ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-accent-ui" />}
               <span>{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
 
@@ -263,7 +290,7 @@ export function App() {
                 </button>
                 <button
                   onClick={() => ownerSignOut()}
-                  className="pill-inactive text-xs px-3 py-2 rounded-xl hover:border-rose-500/50 inline-flex items-center gap-1.5 transition"
+                  className="pill-inactive text-xs px-3 py-2 rounded-xl inline-flex items-center gap-1.5 transition"
                 >
                   <LogOut className="w-3.5 h-3.5" /> Sign Out
                 </button>
@@ -271,7 +298,7 @@ export function App() {
             ) : (
               <button
                 onClick={() => setLoginOpen(true)}
-                className="text-xs px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-sm inline-flex items-center gap-1.5 transition"
+                className="btn-primary text-xs px-3.5 py-2 rounded-xl font-semibold shadow-sm inline-flex items-center gap-1.5 transition"
               >
                 <Lock className="w-3.5 h-3.5" /> Owner Sign In
               </button>
@@ -279,38 +306,32 @@ export function App() {
           </div>
         </header>
 
-        {/* Motivating Hero Section */}
+        {/* Daily Quote & Snapshot Hero */}
         <section className="surface-card rounded-2xl p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-5 items-center overflow-hidden">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-300">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent-ui">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Algorithmic Ascent · Guardian ({targetLc}+) &amp; Expert / CM ({targetCf}+)</span>
+              <span>Steady Practice · Targets: {targetLc} LC · {targetCf} CF</span>
             </div>
 
             <blockquote className="space-y-1.5">
               <div className="flex items-start gap-2">
-                <Quote className="w-5 h-5 text-indigo-500/70 shrink-0 mt-0.5" />
+                <Quote className="w-5 h-5 text-accent-ui opacity-70 shrink-0 mt-0.5" />
                 <p className="text-base sm:text-lg font-semibold tracking-tight text-primary-ui leading-snug">
                   {quote.text}
                 </p>
               </div>
-              <footer className="pl-7 flex items-center gap-3 text-xs text-muted-ui">
+              <footer className="pl-7 text-xs text-muted-ui">
                 <span>— {quote.author}</span>
-                <button
-                  onClick={() => setQuoteIdx((i) => (i + 1) % QUOTES.length)}
-                  className="text-indigo-500 hover:underline font-medium"
-                >
-                  Next quote
-                </button>
               </footer>
             </blockquote>
 
             <div className="pl-7 flex flex-wrap gap-2 pt-1 text-xs">
               <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
-                LC {lcRatingVal ?? "—"} <span className="text-indigo-500">→ {targetLc}</span>
+                LC {lcRatingVal ?? "—"} <span className="text-accent-ui">→ {targetLc}</span>
               </span>
               <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
-                CF {liveCf?.info.rating ?? "—"} <span className="text-emerald-500">→ {targetCf}</span>
+                CF {liveCf?.info.rating ?? "—"} <span className="text-ok-ui">→ {targetCf}</span>
               </span>
               <span className="surface-inset px-2.5 py-1 rounded-lg font-mono text-primary-ui">
                 AC {diagnosis.acSolvedCount} ACs
@@ -329,8 +350,8 @@ export function App() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent pointer-events-none" />
             <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-xs text-slate-200 font-mono">
-              <span>Rolling 365-Day Intelligence</span>
-              <span className="text-emerald-300">{diagnosis.weakTags.length} gaps tracked</span>
+              <span>365-Day Contest Log</span>
+              <span className="text-teal-300">{diagnosis.weakTags.length} focus topics</span>
             </div>
           </div>
         </section>
@@ -381,7 +402,7 @@ export function App() {
           <div className="text-xs text-muted-ui flex items-center gap-1.5 pb-1">
             {!isOwner && (
               <>
-                <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <ShieldAlert className="w-3.5 h-3.5 text-warn-ui shrink-0" />
                 <span>Guest analysis runs locally in your browser (no owner Firebase/Gemini used).</span>
               </>
             )}
@@ -389,7 +410,7 @@ export function App() {
         </section>
 
         {liveError && (
-          <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-500">
+          <div className="badge-gap p-3 rounded-xl text-xs">
             {liveError}
           </div>
         )}
@@ -400,7 +421,7 @@ export function App() {
             onClick={() => setTab("upsolve")}
             className={`text-xs font-medium px-3.5 py-2 rounded-xl border inline-flex items-center gap-1.5 transition ${
               tab === "upsolve"
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-sm"
+                ? "btn-primary shadow-sm"
                 : "pill-inactive"
             }`}
           >
@@ -410,7 +431,7 @@ export function App() {
             onClick={() => setTab("diagnosis")}
             className={`text-xs font-medium px-3.5 py-2 rounded-xl border inline-flex items-center gap-1.5 transition ${
               tab === "diagnosis"
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-sm"
+                ? "btn-primary shadow-sm"
                 : "pill-inactive"
             }`}
           >
@@ -420,7 +441,7 @@ export function App() {
             onClick={() => setTab("heatmap")}
             className={`text-xs font-medium px-3.5 py-2 rounded-xl border inline-flex items-center gap-1.5 transition ${
               tab === "heatmap"
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-sm"
+                ? "btn-primary shadow-sm"
                 : "pill-inactive"
             }`}
           >

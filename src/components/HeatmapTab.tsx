@@ -127,7 +127,7 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                 }}
                 className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition ${
                   tierId === t.id
-                    ? "bg-indigo-600 border-indigo-500 text-white shadow-sm"
+                    ? "btn-primary shadow-sm"
                     : "pill-inactive"
                 }`}
               >
@@ -140,7 +140,7 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
               type="checkbox"
               checked={hideGeneric}
               onChange={(e) => setHideGeneric(e.target.checked)}
-              className="accent-indigo-500"
+              className="accent-sky-600"
             />
             Focus algorithmic tags (hide Array / Impl)
           </label>
@@ -158,7 +158,7 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                   <span className="font-bold text-sm text-primary-ui">{sl}</span>
                   <span className="text-xs font-mono text-muted-ui">n={sd.count}</span>
                 </div>
-                <div className="text-xs text-indigo-500 dark:text-indigo-400 font-medium whitespace-nowrap truncate">
+                <div className="text-xs text-accent-ui font-medium whitespace-nowrap truncate">
                   {def.plat === "LeetCode"
                     ? `${sd.topDiff}${sd.medRating ? ` · ~${sd.medRating}` : ""}`
                     : sd.medRating !== null
@@ -168,7 +168,7 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                 <div className="space-y-1 pt-1.5 border-t border-slate-300/40 dark:border-slate-800/70">
                   {top3.map(([t, c]) => (
                     <div key={t} className="flex justify-between items-center text-xs gap-2">
-                      <span className={`truncate ${weakSet.has(t) ? "text-rose-500 font-medium" : "text-secondary-ui"}`}>
+                      <span className={`truncate ${weakSet.has(t) ? "text-gap-ui font-medium" : "text-secondary-ui"}`}>
                         {t}
                       </span>
                       <span className="font-mono text-muted-ui shrink-0">
@@ -219,8 +219,8 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                     <div className="flex items-center gap-1.5">
                       <span className="truncate">{tag}</span>
                       {weakSet.has(tag) && (
-                        <span className="px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-500 border border-rose-500/30 shrink-0">
-                          Gap
+                        <span className="badge-gap px-1.5 py-0.5 rounded shrink-0">
+                          Focus
                         </span>
                       )}
                     </div>
@@ -235,7 +235,7 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                         <button
                           onClick={() => handleCellClick(sl, tag)}
                           className={`w-full py-1.5 rounded-md font-mono transition ${heatClass(pct, cnt)} ${
-                            active ? "ring-2 ring-amber-400" : "hover:brightness-110"
+                            active ? "ring-2 ring-teal-400" : "hover:brightness-110"
                           }`}
                           title={`${tag} in ${sl}: ${cnt}/${n} (${pct}%)`}
                         >
@@ -275,13 +275,13 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                       href={q.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium text-primary-ui hover:text-indigo-500 inline-flex items-center gap-1 max-w-full"
+                      className="text-xs font-medium text-primary-ui hover:text-accent-ui inline-flex items-center gap-1 max-w-full"
                     >
                       <span className="truncate">{q.title}</span>
                       <ExternalLink className="w-3 h-3 shrink-0" />
                     </a>
                     <div className="text-xs text-muted-ui mt-0.5">
-                      {q.contestTitle} · {q.dateStr} · <span className="font-mono text-indigo-500 dark:text-indigo-300">{q.rating ?? q.difficulty}</span>
+                      {q.contestTitle} · {q.dateStr} · <span className="font-mono text-accent-ui">{q.rating ?? q.difficulty}</span>
                     </div>
                   </div>
                   <button
@@ -292,9 +292,9 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                     aria-label={`Toggle status for ${q.title}`}
                     className={`shrink-0 p-1.5 rounded-lg border text-xs transition ${
                       st === "done"
-                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-500"
+                        ? "badge-ok"
                         : st === "revisit"
-                        ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
+                        ? "badge-warn"
                         : "pill-inactive"
                     }`}
                   >

@@ -29,9 +29,9 @@ export function DiagnosisTab({
   );
 
   const badgeClass = (v: string) => {
-    if (v === "Strong") return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
-    if (v === "Capped") return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30";
-    if (v === "Gap") return "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30";
+    if (v === "Strong") return "badge-ok";
+    if (v === "Capped") return "badge-warn";
+    if (v === "Gap") return "badge-gap";
     return "pill-inactive";
   };
 
@@ -47,7 +47,7 @@ export function DiagnosisTab({
             </span>
           </div>
           <div className="text-xs text-muted-ui">
-            {diagnosis.cfSolvedCount} solved · <span className="text-rose-500">{diagnosis.cfUnsolved.length} attempted &amp; unsolved</span>
+            {diagnosis.cfSolvedCount} solved · <span className="text-gap-ui">{diagnosis.cfUnsolved.length} attempted &amp; unsolved</span>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ export function DiagnosisTab({
                   const pct = Math.round((100 * b.count) / Math.max(1, maxC));
                   const num = Number(b.label);
                   const col =
-                    num >= 1600 ? "bg-indigo-500" : num >= 1400 ? "bg-cyan-500" : num >= 1200 ? "bg-emerald-500" : "bg-slate-400";
+                    num >= 1600 ? "bg-sky-500" : num >= 1400 ? "bg-cyan-500" : num >= 1200 ? "bg-teal-500" : "bg-slate-400";
                   return (
                     <div key={b.label} className="flex items-center gap-2.5 text-xs">
                       <span className="w-11 font-mono text-secondary-ui">{b.label}</span>
@@ -120,19 +120,19 @@ export function DiagnosisTab({
           <div className="pt-3 border-t border-slate-300/40 dark:border-slate-800/80 grid grid-cols-3 gap-2 text-xs">
             <div className="surface-inset rounded-xl p-2.5">
               <div className="text-muted-ui">Strong Tags</div>
-              <div className="text-base font-bold text-emerald-500 font-mono">
+              <div className="text-base font-bold text-ok-ui font-mono">
                 {diagnosis.cfAudit.filter((r) => r.verdict === "Strong").length}
               </div>
             </div>
             <div className="surface-inset rounded-xl p-2.5">
               <div className="text-muted-ui">Capped / Gaps</div>
-              <div className="text-base font-bold text-amber-500 font-mono">
+              <div className="text-base font-bold text-warn-ui font-mono">
                 {diagnosis.cfAudit.filter((r) => r.verdict === "Gap" || r.verdict === "Capped").length}
               </div>
             </div>
             <div className="surface-inset rounded-xl p-2.5">
               <div className="text-muted-ui">Untouched</div>
-              <div className="text-base font-bold text-rose-500 font-mono">
+              <div className="text-base font-bold text-gap-ui font-mono">
                 {diagnosis.cfAudit.filter((r) => r.verdict === "Untouched").length}
               </div>
             </div>
@@ -142,7 +142,7 @@ export function DiagnosisTab({
         <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-4">
           <div className="space-y-2.5">
             <div>
-              <h2 className="text-sm font-semibold text-primary-ui">Detected Weak / Capped Topics</h2>
+              <h2 className="text-sm font-semibold text-primary-ui">Focus Topics to Strengthen</h2>
               <p className="text-xs text-muted-ui">
                 Click any topic chip to jump directly to matching upsolve drills in Tab 1.
               </p>
@@ -155,7 +155,7 @@ export function DiagnosisTab({
                   <button
                     key={t}
                     onClick={() => onJumpToTopic(t)}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-rose-500/12 border border-rose-500/30 text-rose-600 dark:text-rose-300 font-medium hover:bg-rose-500/20 transition inline-flex items-center gap-1"
+                    className="badge-gap text-xs px-2.5 py-1 rounded-lg font-medium hover:brightness-110 transition inline-flex items-center gap-1"
                   >
                     <span>{t}</span>
                     <ArrowUpRight className="w-3 h-3 opacity-80" />
@@ -176,7 +176,7 @@ export function DiagnosisTab({
                   >
                     <span className="text-primary-ui truncate">{h.title}</span>
                     <span className="font-mono text-muted-ui shrink-0">
-                      {h.solved}/{h.total} · Rank {h.ranking} · <span className="text-indigo-500 dark:text-indigo-400">{h.rating}</span>
+                      {h.solved}/{h.total} · Rank {h.ranking} · <span className="text-accent-ui">{h.rating}</span>
                     </span>
                   </div>
                 ))}
@@ -224,7 +224,7 @@ export function DiagnosisTab({
                     <span className={`px-2 py-0.5 rounded border ${badgeClass(r.verdict)}`}>{r.verdict}</span>
                   </td>
                   <td className="py-2 px-2.5 text-right font-mono">{r.ok}</td>
-                  <td className="py-2 px-2.5 text-right font-mono text-rose-500">{r.fail}</td>
+                  <td className="py-2 px-2.5 text-right font-mono text-gap-ui">{r.fail}</td>
                   <td className="py-2 px-2.5 text-right font-mono">{r.ok + r.fail ? `${r.acRate}%` : "—"}</td>
                   <td className="py-2 px-2.5 text-right font-mono">{r.medRating ?? "—"}</td>
                   <td className="py-2 px-2.5 text-right font-mono">{r.maxRating ?? "—"}</td>
