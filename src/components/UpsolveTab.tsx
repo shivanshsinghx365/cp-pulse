@@ -17,6 +17,80 @@ import type {
 } from "../types";
 import { makeProblemKey } from "../lib/tags";
 import { difficultyBadgeClass } from "../lib/analyzer";
+
+function formatMathToken(tex: string): string {
+  return tex
+    .replace(/\\cdot/g, "·")
+    .replace(/\\times/g, "×")
+    .replace(/\\le/g, "≤")
+    .replace(/\\ge/g, "≥")
+    .replace(/\\neq/g, "≠")
+    .replace(/\\to/g, "→")
+    .replace(/\\rightarrow/g, "→")
+    .replace(/\\infty/g, "∞")
+    .replace(/\\log/g, "log")
+    .replace(/\\sqrt/g, "√")
+    .replace(/\\left|\\right/g, "")
+    .replace(/[{}]/g, "");
+}
+
+function renderInlineMarkdown(line: string) {
+  const tokens = line.split(/(\*\*[^*]+\*\*|`[^`]+`|\$[^$]+\$)/g);
+  return tokens.map((tok, idx) => {
+    if (tok.startsWith("**") && tok.endsWith("**") && tok.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-primary-ui">
+          {tok.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (tok.startsWith("`") && tok.endsWith("`") && tok.length > 2) {
+      return (
+        <code key={idx} className="font-mono text-[11px] px-1 py-0.5 rounded bg-sky-500/10 text-accent-ui">
+          {tok.slice(1, -1)}
+        </code>
+      );
+    }
+    if (tok.startsWith("$") && tok.endsWith("$") && tok.length > 2) {
+      return (
+        <span key={idx} className="font-mono text-[11px] px-1 py-0.5 rounded bg-sky-500/10 text-accent-ui">
+          {formatMathToken(tok.slice(1, -1))}
+        </span>
+      );
+    }
+    return <span key={idx}>{tok}</span>;
+  });
+}
+
+function HintMarkdown({ text }: { text: string }) {
+  const lines = text.split(/\r?\n/);
+  return (
+    <div className="space-y-1.5 text-xs text-secondary-ui leading-relaxed">
+      {lines.map((raw, i) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return <div key={i} className="h-0.5" />;
+        const headingMatch = trimmed.match(/^#{1,3}\s+(.+)$/);
+        if (headingMatch) {
+          return (
+            <div key={i} className="font-semibold text-primary-ui pt-1">
+              {renderInlineMarkdown(headingMatch[1])}
+            </div>
+          );
+        }
+        const bulletMatch = trimmed.match(/^(?:[*+-]|\d+\.)\s+(.+)$/);
+        if (bulletMatch) {
+          return (
+            <div key={i} className="flex items-start gap-2 pl-1">
+              <span className="text-accent-ui font-bold mt-0.5">•</span>
+              <div className="min-w-0 flex-1">{renderInlineMarkdown(bulletMatch[1])}</div>
+            </div>
+          );
+        }
+        return <p key={i}>{renderInlineMarkdown(trimmed)}</p>;
+      })}
+    </div>
+  );
+}
 import { fetchGeminiHint } from "../lib/liveApi";
 
 interface Props {
@@ -225,8 +299,8 @@ export function UpsolveTab({
           </div>
 
           {aiHints[makeProblemKey("LeetCode", potd.today.slug)] && (
-            <div className="surface-inset p-3.5 rounded-xl border-sky-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
-              {aiHints[makeProblemKey("LeetCode", potd.today.slug)]}
+            <div className="surface-inset p-3.5 rounded-xl border-sky-500/30">
+              <HintMarkdown text={aiHints[makeProblemKey("LeetCode", potd.today.slug)]} />
             </div>
           )}
 
@@ -465,8 +539,8 @@ export function UpsolveTab({
                 )}
 
                 {aiHints[item.key] && (
-                  <div className="surface-card mt-2.5 px-3 py-2.5 rounded-lg border-sky-500/30 text-xs text-primary-ui whitespace-pre-wrap leading-relaxed">
-                    {aiHints[item.key]}
+                  <div className="surface-card mt-2.5 px-3 py-2.5 rounded-lg border-sky-500/30">
+                    <HintMarkdown text={aiHints[item.key]} />
                   </div>
                 )}
 
