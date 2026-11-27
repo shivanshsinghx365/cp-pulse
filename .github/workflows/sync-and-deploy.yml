@@ -45,6 +45,14 @@ jobs:
         # Run full sync (not --public-only); Firestore push is a no-op when secrets are missing
         run: python scripts/sync_all.py
 
+      - name: Commit daily public data (keeps 60-day schedule active)
+        if: github.event_name == 'schedule'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/contests_1yr.json public/data/potd.json
+          git diff --cached --quiet || (git commit -m "chore: daily contest & POTD sync [skip ci]" && git push)
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

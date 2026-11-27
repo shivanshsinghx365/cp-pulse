@@ -24,7 +24,7 @@ export async function fetchLiveCodeforces(handle: string): Promise<LiveCfResult>
   const [infoRes, ratingRes, statusRes] = await Promise.all([
     fetch(`https://codeforces.com/api/user.info?handles=${clean}`),
     fetch(`https://codeforces.com/api/user.rating?handle=${clean}`),
-    fetch(`https://codeforces.com/api/user.status?handle=${clean}&from=1&count=1500`),
+    fetch(`https://codeforces.com/api/user.status?handle=${clean}&from=1&count=3000`),
   ]);
 
   const [infoJ, ratingJ, statusJ] = await Promise.all([
@@ -48,7 +48,7 @@ export async function fetchLiveAtCoder(handle: string): Promise<AcSubmission[]> 
   const clean = encodeURIComponent(handle.trim());
   const all: AcSubmission[] = [];
   let fromSec = 0;
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 15; i++) {
     const res = await fetch(
       `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${clean}&from_second=${fromSec}`
     );

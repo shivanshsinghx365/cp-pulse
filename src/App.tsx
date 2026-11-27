@@ -270,17 +270,45 @@ export function App() {
   const activeLcData = useMemo(() => {
     if (!isOwnerActive) return null;
     if (liveLc) {
+      // Derive missed Q1-Q4 directly from live LC contestHistory + rolling 1-year contests dataset
+      const lcContestMap = new Map<string, ContestRecord>();
+      for (const c of contests) {
+        if (c.platform === "LeetCode") lcContestMap.set(c.id, c);
+      }
+      const derivedMissed: OwnerSnapshot["leetcode"]["missedContestQuestions"] = [];
+      for (const h of liveLc.contestHistory) {
+        const c = lcContestMap.get(h.slug);
+        if (!c) continue;
+        c.questions.forEach((q, idx) => {
+          if (idx + 1 > h.solved) {
+            derivedMissed.push({
+              platform: "LeetCode",
+              contestTitle: c.title,
+              slot: q.slot,
+              id: q.id,
+              title: q.title,
+              url: `https://leetcode.com/problems/${q.id}/`,
+              difficulty: q.difficulty,
+              rating: q.rating,
+              tags: q.tags,
+              reason: `Missed in ${c.title} (${h.solved}/${c.questions.length} solved)`,
+              ts: c.startTime,
+            });
+          }
+        });
+      }
+      const snapshotMissed = ownerSnapshot?.leetcode?.missedContestQuestions ?? [];
       return {
         ranking: liveLc.ranking,
         contestHistory: liveLc.contestHistory,
         acStats: ownerSnapshot?.leetcode?.acStats ?? [],
         tagCounts: ownerSnapshot?.leetcode?.tagCounts ?? {},
-        missedContestQuestions: ownerSnapshot?.leetcode?.missedContestQuestions ?? [],
+        missedContestQuestions: derivedMissed.length > 0 ? derivedMissed : snapshotMissed,
         recentAc: ownerSnapshot?.leetcode?.recentAc ?? [],
       };
     }
     return ownerSnapshot?.leetcode ?? null;
-  }, [isOwnerActive, liveLc, ownerSnapshot]);
+  }, [isOwnerActive, liveLc, ownerSnapshot, contests]);
 
   const activeAcRating = useMemo(
     () => (isOwnerActive ? (liveAcRating.length > 0 ? liveAcRating : ownerSnapshot?.atcoder?.ratingHistory ?? []) : []),
