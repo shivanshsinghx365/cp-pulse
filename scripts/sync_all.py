@@ -318,6 +318,39 @@ def to_canonical(raw_tags: list[str]) -> list[str]:
     return out
 
 
+_GEMINI_MODEL_CACHE: str | None = None
+
+
+def _pick_gemini_model() -> str:
+    global _GEMINI_MODEL_CACHE
+    if _GEMINI_MODEL_CACHE:
+        return _GEMINI_MODEL_CACHE
+    fallback = "gemini-flash-latest"
+    try:
+        data = get_json(f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_KEY}", timeout=10)
+        best_score = -1
+        best_id = fallback
+        for m in data.get("models") or []:
+            name = (m.get("name") or "").replace("models/", "")
+            methods = m.get("supportedGenerationMethods") or []
+            if not name or "generateContent" not in methods:
+                continue
+            low = name.lower()
+            if any(x in low for x in ("embedding", "imagen", "veo", "tts", "audio", "live", "robotics", "computer-use", "image")):
+                continue
+            ver = re.search(r"gemini-(\d+)(?:\.(\d+))?", low)
+            major = int(ver.group(1)) if ver else 0
+            minor = int(ver.group(2)) if (ver and ver.group(2)) else 0
+            score = (1000 if "flash" in low else 500 if "pro" in low else 100) + major * 100 + minor * 10 + (50 if "flash-latest" in low else 0) + (0 if ("exp" in low or "preview" in low) else 5)
+            if score > best_score:
+                best_score = score
+                best_id = name
+        _GEMINI_MODEL_CACHE = best_id
+    except Exception:
+        _GEMINI_MODEL_CACHE = fallback
+    return _GEMINI_MODEL_CACHE
+
+
 def gemini_tag(title: str, snippet: str) -> list[str]:
     """Optional owner-only Gemini Flash tagger used only inside GitHub Actions when GEMINI_API_KEY secret is set."""
     if not GEMINI_KEY or not snippet:
@@ -329,7 +362,8 @@ def gemini_tag(title: str, snippet: str) -> list[str]:
         f"Shortest Path, DFS, BFS, Union-Find, Combinatorics, Number Theory, Stack, Heap, Trie, Simulation, Design.\n"
         f"Title: {title}\nStatement: {snippet[:900]}\nReturn ONLY a comma-separated list of tags."
     )
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_KEY}"
+    model = _pick_gemini_model()
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_KEY}"
     body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
     try:
         req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})

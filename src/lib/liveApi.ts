@@ -169,11 +169,57 @@ export async function fetchLiveAcRatingHistory(handle: string): Promise<AcRating
   }
 }
 
+const cachedGeminiModels = new Map<string, string[]>();
+
+function scoreGeminiModel(id: string): number {
+  const lower = id.toLowerCase();
+  if (/embedding|imagen|veo|tts|audio|live|robotics|computer-use|aqa|bison|gecko|image/.test(lower)) {
+    return -1;
+  }
+  const isFlash = lower.includes("flash") ? 1000 : lower.includes("pro") ? 500 : 100;
+  const verMatch = lower.match(/gemini-(\d+)(?:\.(\d+))?/);
+  const major = verMatch ? Number(verMatch[1]) : 0;
+  const minor = verMatch && verMatch[2] ? Number(verMatch[2]) : 0;
+  const versionScore = major * 100 + minor * 10;
+  const isLatestAlias = lower.includes("flash-latest") ? 50 : 0;
+  const stableBonus = /exp|preview/.test(lower) ? 0 : 5;
+  return isFlash + versionScore + isLatestAlias + stableBonus;
+}
+
+async function getGeminiCandidateModels(apiKey: string): Promise<string[]> {
+  const cached = cachedGeminiModels.get(apiKey);
+  if (cached?.length) return cached;
+
+  const fallback = ["gemini-flash-latest", "gemini-3.5-flash-lite", "gemini-3.8-flash"];
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`
+    );
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    const list: Array<{ name?: string; supportedGenerationMethods?: string[] }> = data?.models || [];
+    const ranked = list
+      .filter((m) => m.name && m.supportedGenerationMethods?.includes("generateContent"))
+      .map((m) => m.name!.replace(/^models\//, ""))
+      .map((id) => ({ id, score: scoreGeminiModel(id) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.id);
+
+    const candidates = ranked.length ? [...new Set([...ranked.slice(0, 4), ...fallback])] : fallback;
+    cachedGeminiModels.set(apiKey, candidates);
+    return candidates;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function fetchGeminiHint(
   geminiKey: string,
   problem: { platform: string; title: string; ratingLabel: string; tags: string[]; reason?: string }
 ): Promise<string> {
-  if (!geminiKey.trim()) {
+  const cleanKey = geminiKey.trim();
+  if (!cleanKey) {
     throw new Error("Add your Gemini API key in Owner Settings first.");
   }
   const prompt = `You are an ICPC/Guardian-level competitive programming coach.
@@ -187,13 +233,13 @@ Format in 3 short bullet points:
 2. Algorithm & State / Complexity (1-2 sentences)
 3. Common Trap / Edge Case to avoid (1 sentence)`;
 
-  const models = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"];
+  const models = await getGeminiCandidateModels(cleanKey);
   let lastErr = "No Gemini model succeeded.";
   for (const model of models) {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
-        geminiKey.trim()
-      )}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+        model
+      )}:generateContent?key=${encodeURIComponent(cleanKey)}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -206,7 +252,7 @@ Format in 3 short bullet points:
     }
     const errText = await res.text();
     lastErr = `Gemini API error (${res.status}): ${errText.slice(0, 160)}`;
-    if (res.status !== 404) {
+    if (res.status !== 404 && res.status !== 400) {
       throw new Error(lastErr);
     }
   }
