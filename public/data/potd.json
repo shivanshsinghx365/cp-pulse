@@ -1,22 +1,42 @@
 {
-  "updatedAt": 1795666898,
+  "updatedAt": 1795769713,
   "today": {
-    "date": "2026-11-26",
-    "id": "3360",
-    "title": "Stone Removal Game",
-    "slug": "stone-removal-game",
-    "url": "https://leetcode.com/problems/stone-removal-game/",
-    "difficulty": "Easy",
+    "date": "2026-11-27",
+    "id": "3946",
+    "title": "Maximum Number of Items From Sale I",
+    "slug": "maximum-number-of-items-from-sale-i",
+    "url": "https://leetcode.com/problems/maximum-number-of-items-from-sale-i/",
+    "difficulty": "Medium",
     "rawTags": [
-      "Math",
-      "Simulation"
+      "Array",
+      "Dynamic Programming",
+      "Greedy"
     ],
     "tags": [
-      "Math",
-      "Implementation & Simulation"
+      "Arrays & Matrix / Grid",
+      "Dynamic Programming",
+      "Greedy"
     ]
   },
   "recent": [
+    {
+      "date": "2026-11-27",
+      "id": "3946",
+      "title": "Maximum Number of Items From Sale I",
+      "slug": "maximum-number-of-items-from-sale-i",
+      "url": "https://leetcode.com/problems/maximum-number-of-items-from-sale-i/",
+      "difficulty": "Medium",
+      "rawTags": [
+        "Array",
+        "Dynamic Programming",
+        "Greedy"
+      ],
+      "tags": [
+        "Arrays & Matrix / Grid",
+        "Dynamic Programming",
+        "Greedy"
+      ]
+    },
     {
       "date": "2026-11-26",
       "id": "3360",
