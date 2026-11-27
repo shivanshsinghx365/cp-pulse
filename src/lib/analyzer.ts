@@ -589,3 +589,21 @@ export function analyzeProfile(
     potdFollowUps,
   };
 }
+
+/** Consistent difficulty/rating badge class: Red (Hard), Yellow (Medium), Green (Easy). */
+export function difficultyBadgeClass(label?: string | null, rating?: number | null): string {
+  const s = (label || "").toLowerCase();
+  if (s.includes("hard")) return "badge-gap";
+  if (s.includes("medium")) return "badge-warn";
+  if (s.includes("easy")) return "badge-ok";
+  const num = rating ?? (() => {
+    const m = s.match(/(\d{3,4})/);
+    return m ? Number(m[1]) : null;
+  })();
+  if (num !== null && Number.isFinite(num)) {
+    if (num >= 1900) return "badge-gap";
+    if (num >= 1400) return "badge-warn";
+    return "badge-ok";
+  }
+  return "pill-inactive";
+}

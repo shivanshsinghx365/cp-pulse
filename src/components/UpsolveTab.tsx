@@ -16,6 +16,7 @@ import type {
   UpsolveItem,
 } from "../types";
 import { makeProblemKey } from "../lib/tags";
+import { difficultyBadgeClass } from "../lib/analyzer";
 import { fetchGeminiHint } from "../lib/liveApi";
 
 interface Props {
@@ -160,7 +161,7 @@ export function UpsolveTab({
                   {potd.today.id}. {potd.today.title}
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
-                <span className="pill-inactive text-xs px-2 py-0.5 rounded-md font-medium">
+                <span className={`${difficultyBadgeClass(potd.today.difficulty)} text-xs px-2 py-0.5 rounded-md font-medium`}>
                   {potd.today.difficulty}
                 </span>
               </div>
@@ -249,7 +250,7 @@ export function UpsolveTab({
                       </div>
                       <div className="text-primary-ui font-medium line-clamp-2 mt-0.5">{q.title}</div>
                     </div>
-                    <span className="badge-accent font-mono shrink-0 px-1.5 py-0.5 rounded">
+                    <span className={`${difficultyBadgeClass(q.difficulty, q.rating)} font-mono shrink-0 px-1.5 py-0.5 rounded`}>
                       {q.rating ?? q.difficulty}
                     </span>
                   </a>
@@ -377,7 +378,7 @@ export function UpsolveTab({
                         {item.title}
                         <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                       </a>
-                      <span className="badge-accent text-xs font-mono px-2 py-0.5 rounded-md">
+                      <span className={`${difficultyBadgeClass(item.ratingLabel, item.numericRating)} text-xs font-mono px-2 py-0.5 rounded-md`}>
                         {item.ratingLabel}
                       </span>
                     </div>

@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { CheckCircle2, ExternalLink, RotateCcw } from "lucide-react";
 import type { ContestRecord, Platform, ProblemProgress } from "../types";
 import { GENERIC_TAGS, makeProblemKey } from "../lib/tags";
+import { difficultyBadgeClass } from "../lib/analyzer";
 
 interface TierDef {
   id: string;
@@ -285,8 +286,11 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                       <span className="truncate">{q.title}</span>
                       <ExternalLink className="w-3 h-3 shrink-0" />
                     </a>
-                    <div className="text-xs text-muted-ui mt-0.5">
-                      {q.contestTitle} · {q.dateStr} · <span className="font-mono text-accent-ui">{q.rating ?? q.difficulty}</span>
+                    <div className="text-xs text-muted-ui mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span>{q.contestTitle} · {q.dateStr}</span>
+                      <span className={`${difficultyBadgeClass(q.difficulty, q.rating)} font-mono px-1.5 py-0.2 rounded`}>
+                        {q.rating ?? q.difficulty}
+                      </span>
                     </div>
                   </div>
                   <button

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ArrowUpRight, CheckCircle2, ExternalLink, Minus, TrendingDown, TrendingUp } from "lucide-react";
-import type { ProfileDiagnosis } from "../lib/analyzer";
+import { difficultyBadgeClass, type ProfileDiagnosis } from "../lib/analyzer";
 import type { AcRatingPoint, OwnerSnapshot } from "../types";
 import type { LiveCfResult } from "../lib/liveApi";
 
@@ -326,7 +326,7 @@ export function PerformanceTab({
                     </div>
                     <div className="text-gap-ui">{q.reason}</div>
                   </div>
-                  <span className="badge-accent font-mono px-2 py-0.5 rounded shrink-0 inline-flex items-center gap-1">
+                  <span className={`${difficultyBadgeClass(q.ratingLabel, q.numericRating)} font-mono px-2 py-0.5 rounded shrink-0 inline-flex items-center gap-1`}>
                     {q.ratingLabel}
                     <ExternalLink className="w-3 h-3" />
                   </span>

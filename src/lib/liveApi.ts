@@ -187,20 +187,28 @@ Format in 3 short bullet points:
 2. Algorithm & State / Complexity (1-2 sentences)
 3. Common Trap / Edge Case to avoid (1 sentence)`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
-      geminiKey.trim()
-    )}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  const models = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"];
+  let lastErr = "No Gemini model succeeded.";
+  for (const model of models) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+        geminiKey.trim()
+      )}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No hint returned.";
     }
-  );
-  if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 160)}`);
+    lastErr = `Gemini API error (${res.status}): ${errText.slice(0, 160)}`;
+    if (res.status !== 404) {
+      throw new Error(lastErr);
+    }
   }
-  const data = await res.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No hint returned.";
+  throw new Error(lastErr);
 }

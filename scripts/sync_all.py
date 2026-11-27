@@ -329,7 +329,7 @@ def gemini_tag(title: str, snippet: str) -> list[str]:
         f"Shortest Path, DFS, BFS, Union-Find, Combinatorics, Number Theory, Stack, Heap, Trie, Simulation, Design.\n"
         f"Title: {title}\nStatement: {snippet[:900]}\nReturn ONLY a comma-separated list of tags."
     )
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_KEY}"
     body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
     try:
         req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"})
