@@ -63,6 +63,8 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
           VITE_OWNER_EMAIL: ${{ vars.VITE_OWNER_EMAIL }}
+          # CORS proxy URL for live LC + AtCoder browser fetches (deploy worker/cp-proxy.js first)
+          VITE_CP_PROXY_URL: ${{ vars.VITE_CP_PROXY_URL }}
         run: npm run build
 
       - name: Upload Pages artifact

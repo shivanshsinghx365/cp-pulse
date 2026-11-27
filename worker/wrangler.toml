@@ -1,0 +1,5 @@
+name = "cp-proxy"
+main = "cp-proxy.js"
+compatibility_date = "2024-01-01"
+
+# No KV, no R2, no Durable Objects needed — pure CPU fetch proxy

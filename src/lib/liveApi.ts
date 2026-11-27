@@ -1,4 +1,9 @@
-import type { AcSubmission, CfRatingPoint, CfSubmission } from "../types";
+import type { AcRatingPoint, AcSubmission, CfRatingPoint, CfSubmission } from "../types";
+
+// ── Proxy URL ────────────────────────────────────────────────────────────────
+// Set VITE_CP_PROXY_URL in GitHub repo vars after deploying worker/cp-proxy.js.
+// Falls back to empty string → fetch attempts will throw and callers handle gracefully.
+const PROXY = (import.meta.env.VITE_CP_PROXY_URL || "").replace(/\/$/, "");
 
 export interface LiveCfResult {
   info: {
@@ -11,6 +16,8 @@ export interface LiveCfResult {
   ratingHistory: CfRatingPoint[];
   submissions: CfSubmission[];
 }
+
+// ── Codeforces (native CORS — no proxy needed) ───────────────────────────────
 
 export async function fetchLiveCodeforces(handle: string): Promise<LiveCfResult> {
   const clean = encodeURIComponent(handle.trim());
@@ -53,6 +60,108 @@ export async function fetchLiveAtCoder(handle: string): Promise<AcSubmission[]> 
     fromSec = batch[batch.length - 1].epoch_second + 1;
   }
   return all;
+}
+
+// ── LeetCode (via CORS proxy) ────────────────────────────────────────────────
+// The returned shape exactly matches OwnerSnapshot["leetcode"] so it can be passed
+// to PerformanceTab / DiagnosisTab without any type casting.
+
+export interface LiveLcResult {
+  ranking: {
+    attendedContestsCount: number;
+    rating: number;
+    globalRanking: number;
+    topPercentage: number;
+  } | null;
+  acStats: { difficulty: string; count: number; submissions: number }[];
+  tagCounts: Record<string, number>;
+  contestHistory: {
+    title: string;
+    slug: string;
+    startTime: number;
+    rating: number;
+    ranking: number;
+    solved: number;
+    total: number;
+  }[];
+  missedContestQuestions: never[];
+  recentAc: { title: string; titleSlug: string; timestamp: string }[];
+}
+
+/** Fetch LeetCode contest ranking + history via the cp-proxy Cloudflare Worker.
+ *  Returns null if VITE_CP_PROXY_URL is not set or the worker returns an error. */
+export async function fetchLiveLeetCode(handle: string): Promise<LiveLcResult | null> {
+  if (!PROXY) return null;
+  try {
+    const res = await fetch(`${PROXY}/lc/${encodeURIComponent(handle.trim())}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.error) return null;
+    const data = json.data ?? {};
+    const rawRanking = data.userContestRanking ?? null;
+    const rawHistory: Array<{
+      attended: boolean;
+      rating: number;
+      ranking: number;
+      problemsSolved: number;
+      totalProblems: number;
+      contest: { title: string; titleSlug: string; startTime: number };
+    }> = data.userContestRankingHistory ?? [];
+    return {
+      ranking: rawRanking
+        ? {
+            attendedContestsCount: rawRanking.attendedContestsCount ?? 0,
+            rating: rawRanking.rating ?? 0,
+            globalRanking: rawRanking.globalRanking ?? 0,
+            topPercentage: rawRanking.topPercentage ?? 100,
+          }
+        : null,
+      acStats: [],       // not fetched via proxy — use snapshot value if available
+      tagCounts: {},     // not fetched via proxy — use snapshot value if available
+      contestHistory: rawHistory
+        .filter((h) => h.attended)
+        .map((h) => ({
+          title: h.contest.title,
+          slug: h.contest.titleSlug,
+          startTime: h.contest.startTime,
+          rating: h.rating,
+          ranking: h.ranking,
+          solved: h.problemsSolved,
+          total: h.totalProblems,
+        })),
+      missedContestQuestions: [],   // computed server-side only; use snapshot
+      recentAc: [],                 // not fetched via proxy; use snapshot
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── AtCoder rating history (via CORS proxy) ──────────────────────────────────
+
+/** Fetch AtCoder rating history via the cp-proxy Cloudflare Worker.
+ *  Returns an empty array (never throws) if the proxy is not configured. */
+export async function fetchLiveAcRatingHistory(handle: string): Promise<AcRatingPoint[]> {
+  if (!PROXY) return [];
+  const res = await fetch(`${PROXY}/ac/${encodeURIComponent(handle.trim())}/history`);
+  if (!res.ok) return [];
+  const raw: Array<Record<string, unknown>> = await res.json();
+  if (!Array.isArray(raw)) return [];
+  return raw.map((r) => {
+    const endStr = (r["EndTime"] as string) || (r["StartTime"] as string) || "";
+    let ts = 0;
+    try { ts = endStr ? Math.floor(new Date(endStr).getTime() / 1000) : 0; } catch { ts = 0; }
+    return {
+      isRated: Boolean(r["IsRated"]),
+      place: (r["Place"] as number) || 0,
+      oldRating: (r["OldRating"] as number) || 0,
+      newRating: (r["NewRating"] as number) || 0,
+      performance: (r["Performance"] as number) || 0,
+      contestName: (r["ContestNameEn"] as string) || (r["ContestName"] as string) || "",
+      contestScreenName: (r["ContestScreenName"] as string) || "",
+      ts,
+    };
+  });
 }
 
 export async function fetchGeminiHint(

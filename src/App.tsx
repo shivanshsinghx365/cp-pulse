@@ -31,9 +31,10 @@ import {
   watchAuth,
   type OwnerPrivateSettings,
 } from "./lib/firebase";
-import { fetchLiveAtCoder, fetchLiveCodeforces, type LiveCfResult } from "./lib/liveApi";
+import { fetchLiveAtCoder, fetchLiveCodeforces, fetchLiveLeetCode, fetchLiveAcRatingHistory, type LiveCfResult, type LiveLcResult } from "./lib/liveApi";
 import { analyzeProfile, unpackContests, type RawCompactContests } from "./lib/analyzer";
 import type {
+  AcRatingPoint,
   AcSubmission,
   ContestRecord,
   OwnerSnapshot,
@@ -119,6 +120,8 @@ export function App() {
   const [acHandleInput, setAcHandleInput] = useState("");
   const [liveCf, setLiveCf] = useState<LiveCfResult | null>(null);
   const [liveAc, setLiveAc] = useState<AcSubmission[]>([]);
+  const [liveLc, setLiveLc] = useState<LiveLcResult | null>(null);
+  const [liveAcRating, setLiveAcRating] = useState<AcRatingPoint[]>([]);
   const [activeGuestMode, setActiveGuestMode] = useState(false);
   const [refreshingLive, setRefreshingLive] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
@@ -148,17 +151,70 @@ export function App() {
     boot();
   }, []);
 
-  async function refreshLiveHandles(cfH: string, acH: string, asGuest: boolean) {
+  async function refreshLiveHandles(
+    cfH: string,
+    acH: string,
+    lcH: string,
+    asGuest: boolean,
+    persistTarget?: { uid: string; baseSnap: OwnerSnapshot | null }
+  ) {
     setRefreshingLive(true);
     setLiveError(null);
     try {
-      const [cfRes, acRes] = await Promise.all([
+      const [cfRes, acSubRes, lcRes, acRatingRes] = await Promise.all([
         cfH.trim() ? fetchLiveCodeforces(cfH) : Promise.resolve(null),
         acH.trim() ? fetchLiveAtCoder(acH) : Promise.resolve([]),
+        lcH.trim() ? fetchLiveLeetCode(lcH).catch(() => null) : Promise.resolve(null),
+        acH.trim() ? fetchLiveAcRatingHistory(acH).catch(() => []) : Promise.resolve([]),
       ]);
       setLiveCf(cfRes);
-      setLiveAc(acRes);
+      setLiveAc(acSubRes);
+      setLiveLc(lcRes);
+      setLiveAcRating(acRatingRes);
       setActiveGuestMode(asGuest);
+
+      // Persist live-fetched LC, AtCoder rating, and CF summary back to Firestore for the owner
+      if (!asGuest && persistTarget && (lcRes || acRatingRes.length > 0 || cfRes)) {
+        const prev = persistTarget.baseSnap;
+        const mergedSnap: OwnerSnapshot = {
+          updatedAt: Math.floor(Date.now() / 1000),
+          handles: {
+            leetcode: lcH.trim() || prev?.handles?.leetcode || "",
+            codeforces: cfH.trim() || prev?.handles?.codeforces || "",
+            atcoder: acH.trim() || prev?.handles?.atcoder || "",
+          },
+          leetcode: lcRes
+            ? {
+                ranking: lcRes.ranking,
+                contestHistory: lcRes.contestHistory,
+                acStats: prev?.leetcode?.acStats ?? [],
+                tagCounts: prev?.leetcode?.tagCounts ?? {},
+                missedContestQuestions: prev?.leetcode?.missedContestQuestions ?? [],
+                recentAc: prev?.leetcode?.recentAc ?? [],
+              }
+            : prev?.leetcode ?? {
+                ranking: null,
+                acStats: [],
+                tagCounts: {},
+                contestHistory: [],
+                missedContestQuestions: [],
+                recentAc: [],
+              },
+          codeforces: cfRes
+            ? cfRes
+            : prev?.codeforces ?? {
+                info: { handle: cfH.trim() },
+                ratingHistory: [],
+                submissions: [],
+              },
+          atcoder: {
+            ratingHistory:
+              acRatingRes.length > 0 ? acRatingRes : prev?.atcoder?.ratingHistory ?? [],
+          },
+        };
+        setOwnerSnapshot(mergedSnap);
+        saveOwnerSnapshot(persistTarget.uid, mergedSnap).catch(() => {});
+      }
     } catch (e) {
       setLiveError(e instanceof Error ? e.message : "Failed to fetch live handles");
     } finally {
@@ -180,12 +236,13 @@ export function App() {
         setOwnerSnapshot(snap);
         const cfH = (st.cfHandle || snap?.handles?.codeforces || "").trim();
         const acH = (st.acHandle || snap?.handles?.atcoder || "").trim();
+        const lcH = (st.lcHandle || snap?.handles?.leetcode || "").trim();
         setCfHandleInput(cfH);
         setAcHandleInput(acH);
         if (snap?.codeforces) setLiveCf(snap.codeforces);
         setActiveGuestMode(false);
-        if (cfH || acH) {
-          refreshLiveHandles(cfH, acH, false);
+        if (cfH || acH || lcH) {
+          refreshLiveHandles(cfH, acH, lcH, false, { uid: u.uid, baseSnap: snap });
         }
       } else {
         setOwnerSettings({});
@@ -193,6 +250,8 @@ export function App() {
         setProgress({});
         setLiveCf(null);
         setLiveAc([]);
+        setLiveLc(null);
+        setLiveAcRating([]);
         setCfHandleInput("");
         setAcHandleInput("");
         setActiveGuestMode(false);
@@ -203,14 +262,33 @@ export function App() {
   const targetCf = ownerSettings.targetCfRating || 1600;
   const targetLc = ownerSettings.targetLcRating || 2150;
 
+  // Prefer live-fetched data; fall back to Firestore snapshot if proxy not configured
+  const isOwnerActive = isOwner && !activeGuestMode;
+  const activeLcData = useMemo(() => {
+    if (!isOwnerActive) return null;
+    if (liveLc) {
+      return {
+        ranking: liveLc.ranking,
+        contestHistory: liveLc.contestHistory,
+        acStats: ownerSnapshot?.leetcode?.acStats ?? [],
+        tagCounts: ownerSnapshot?.leetcode?.tagCounts ?? {},
+        missedContestQuestions: ownerSnapshot?.leetcode?.missedContestQuestions ?? [],
+        recentAc: ownerSnapshot?.leetcode?.recentAc ?? [],
+      };
+    }
+    return ownerSnapshot?.leetcode ?? null;
+  }, [isOwnerActive, liveLc, ownerSnapshot]);
+
+  const activeAcRating = useMemo(
+    () => (isOwnerActive ? (liveAcRating.length > 0 ? liveAcRating : ownerSnapshot?.atcoder?.ratingHistory ?? []) : []),
+    [isOwnerActive, liveAcRating, ownerSnapshot]
+  );
+
   const diagnosis = useMemo(() => {
-    const useOwnerLc = isOwner && !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode.missedContestQuestions : null;
-    const recentAcSlugs =
-      isOwner && !activeGuestMode && ownerSnapshot
-        ? ownerSnapshot.leetcode.recentAc.map((a) => a.titleSlug)
-        : [];
+    const useOwnerLc = activeLcData?.missedContestQuestions ?? null;
+    const recentAcSlugs = activeLcData?.recentAc?.map((a) => a.titleSlug) ?? [];
     return analyzeProfile(contests, potd, liveCf, liveAc, useOwnerLc, targetCf, recentAcSlugs);
-  }, [contests, potd, liveCf, liveAc, isOwner, activeGuestMode, ownerSnapshot, targetCf]);
+  }, [contests, potd, liveCf, liveAc, activeLcData, targetCf]);
 
   async function handleUpdateProgress(
     key: string,
@@ -248,12 +326,12 @@ export function App() {
 
   const doneCount = Object.values(progress).filter((p) => p.status === "done").length;
   const hasProfile = Boolean(liveCf || liveAc.length > 0 || (isOwner && ownerSnapshot));
+
   const lcRatingVal =
-    isOwner && !activeGuestMode && ownerSnapshot?.leetcode.ranking
-      ? Math.round(ownerSnapshot.leetcode.ranking.rating)
+    isOwnerActive && (liveLc?.ranking?.rating ?? ownerSnapshot?.leetcode?.ranking?.rating)
+      ? Math.round((liveLc?.ranking?.rating ?? ownerSnapshot?.leetcode?.ranking?.rating)!)
       : null;
-  const acRated = isOwner && !activeGuestMode ? ownerSnapshot?.atcoder?.ratingHistory || [] : [];
-  const acRatingVal = acRated.filter((r) => r.isRated).slice(-1)[0]?.newRating ?? null;
+  const acRatingVal = activeAcRating.filter((r) => r.isRated).slice(-1)[0]?.newRating ?? null;
   const quote = QUOTES[quoteIdx % QUOTES.length];
   const baseUrl = import.meta.env.BASE_URL || "./";
 
@@ -428,7 +506,14 @@ export function App() {
               onClick={async () => {
                 const cfH = cfHandleInput.trim();
                 const acH = acHandleInput.trim();
-                await refreshLiveHandles(cfH, acH, !isOwner);
+                const lcH = (ownerSettings.lcHandle || ownerSnapshot?.handles?.leetcode || "").trim();
+                await refreshLiveHandles(
+                  cfH,
+                  acH,
+                  lcH,
+                  !isOwner,
+                  isOwner && user ? { uid: user.uid, baseSnap: ownerSnapshot } : undefined
+                );
                 if (isOwner && user) {
                   const nextSettings = { ...ownerSettings, cfHandle: cfH, acHandle: acH };
                   setOwnerSettings(nextSettings);
@@ -524,8 +609,8 @@ export function App() {
           <PerformanceTab
             diagnosis={diagnosis}
             cfData={liveCf}
-            lcData={isOwner && !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode : null}
-            acRatingHistory={acRated}
+            lcData={activeLcData}
+            acRatingHistory={activeAcRating}
             isOwner={isOwner}
             hasProfile={hasProfile}
             targetCfRating={targetCf}
@@ -541,7 +626,7 @@ export function App() {
           <DiagnosisTab
             diagnosis={diagnosis}
             cfData={liveCf}
-            lcData={isOwner && !activeGuestMode && ownerSnapshot ? ownerSnapshot.leetcode : null}
+            lcData={activeLcData}
             isOwner={isOwner}
             hasProfile={hasProfile}
             targetCfRating={targetCf}
@@ -583,8 +668,14 @@ export function App() {
             setOwnerSettings(s);
             setCfHandleInput(s.cfHandle || "");
             setAcHandleInput(s.acHandle || "");
-            if (s.cfHandle || s.acHandle) {
-              await refreshLiveHandles(s.cfHandle || "", s.acHandle || "", false);
+            if (s.cfHandle || s.acHandle || s.lcHandle) {
+              await refreshLiveHandles(
+                s.cfHandle || "",
+                s.acHandle || "",
+                s.lcHandle || "",
+                false,
+                { uid: user.uid, baseSnap: ownerSnapshot }
+              );
             }
           }
         }}

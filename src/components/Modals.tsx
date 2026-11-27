@@ -119,6 +119,7 @@ export function OwnerSettingsModal({
   const [targetLc, setTargetLc] = useState(String(settings.targetLcRating || 2150));
   const [cfHandle, setCfHandle] = useState(settings.cfHandle || "");
   const [acHandle, setAcHandle] = useState(settings.acHandle || "");
+  const [lcHandle, setLcHandle] = useState(settings.lcHandle || "");
   const [snapMsg, setSnapMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -128,6 +129,7 @@ export function OwnerSettingsModal({
     setTargetLc(String(settings.targetLcRating || 2150));
     setCfHandle(settings.cfHandle || "");
     setAcHandle(settings.acHandle || "");
+    setLcHandle(settings.lcHandle || "");
     setSnapMsg(null);
   }, [settings, open]);
 
@@ -152,6 +154,7 @@ export function OwnerSettingsModal({
         targetLcRating: Number(targetLc) || 2150,
         cfHandle: cfHandle.trim(),
         acHandle: acHandle.trim(),
+        lcHandle: lcHandle.trim(),
       });
       onClose();
     } finally {
@@ -218,14 +221,14 @@ export function OwnerSettingsModal({
             <p className="text-muted-ui">Stored strictly inside your private Firestore document, never exposed to guests.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             <div className="space-y-1.5">
               <label htmlFor="settings-cf" className="block text-secondary-ui font-medium">CF Handle</label>
               <input
                 id="settings-cf"
                 value={cfHandle}
                 onChange={(e) => setCfHandle(e.target.value)}
-                placeholder="Your CF handle"
+                placeholder="CF handle"
                 className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
@@ -235,7 +238,17 @@ export function OwnerSettingsModal({
                 id="settings-ac"
                 value={acHandle}
                 onChange={(e) => setAcHandle(e.target.value)}
-                placeholder="Your AtCoder handle"
+                placeholder="AC handle"
+                className="input-field w-full px-3 py-2 rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="settings-lc" className="block text-secondary-ui font-medium">LeetCode Handle</label>
+              <input
+                id="settings-lc"
+                value={lcHandle}
+                onChange={(e) => setLcHandle(e.target.value)}
+                placeholder="LC handle"
                 className="input-field w-full px-3 py-2 rounded-xl"
               />
             </div>
