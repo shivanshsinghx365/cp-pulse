@@ -137,31 +137,36 @@ export async function fetchLiveLeetCode(handle: string): Promise<LiveLcResult | 
   }
 }
 
-// ── AtCoder rating history (via CORS proxy) ──────────────────────────────────
+// ── AtCoder rating history (native CORS via kenkoooo proxy) ──────────────────
 
-/** Fetch AtCoder rating history via the cp-proxy Cloudflare Worker.
- *  Returns an empty array (never throws) if the proxy is not configured. */
+/** Fetch AtCoder rating history directly from kenkoooo's CORS-enabled proxy.
+ *  Returns an empty array (never throws) on error or if the handle has no history. */
 export async function fetchLiveAcRatingHistory(handle: string): Promise<AcRatingPoint[]> {
-  if (!PROXY) return [];
-  const res = await fetch(`${PROXY}/ac/${encodeURIComponent(handle.trim())}/history`);
-  if (!res.ok) return [];
-  const raw: Array<Record<string, unknown>> = await res.json();
-  if (!Array.isArray(raw)) return [];
-  return raw.map((r) => {
-    const endStr = (r["EndTime"] as string) || (r["StartTime"] as string) || "";
-    let ts = 0;
-    try { ts = endStr ? Math.floor(new Date(endStr).getTime() / 1000) : 0; } catch { ts = 0; }
-    return {
-      isRated: Boolean(r["IsRated"]),
-      place: (r["Place"] as number) || 0,
-      oldRating: (r["OldRating"] as number) || 0,
-      newRating: (r["NewRating"] as number) || 0,
-      performance: (r["Performance"] as number) || 0,
-      contestName: (r["ContestNameEn"] as string) || (r["ContestName"] as string) || "",
-      contestScreenName: (r["ContestScreenName"] as string) || "",
-      ts,
-    };
-  });
+  const clean = encodeURIComponent(handle.trim());
+  if (!clean) return [];
+  try {
+    const res = await fetch(`https://kenkoooo.com/atcoder/proxy/users/${clean}/history/json`);
+    if (!res.ok) return [];
+    const raw: Array<Record<string, unknown>> = await res.json();
+    if (!Array.isArray(raw)) return [];
+    return raw.map((r) => {
+      const endStr = (r["EndTime"] as string) || (r["StartTime"] as string) || "";
+      let ts = 0;
+      try { ts = endStr ? Math.floor(new Date(endStr).getTime() / 1000) : 0; } catch { ts = 0; }
+      return {
+        isRated: Boolean(r["IsRated"]),
+        place: (r["Place"] as number) || 0,
+        oldRating: (r["OldRating"] as number) || 0,
+        newRating: (r["NewRating"] as number) || 0,
+        performance: (r["Performance"] as number) || 0,
+        contestName: (r["ContestNameEn"] as string) || (r["ContestName"] as string) || "",
+        contestScreenName: (r["ContestScreenName"] as string) || "",
+        ts,
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchGeminiHint(
