@@ -252,7 +252,8 @@ Format in 3 short bullet points:
     }
     const errText = await res.text();
     lastErr = `Gemini API error (${res.status}): ${errText.slice(0, 160)}`;
-    if (res.status !== 404 && res.status !== 400) {
+    // Fall through to the next candidate model on 404/400/429/500/503 (only abort immediately on auth errors)
+    if (res.status === 401 || res.status === 403) {
       throw new Error(lastErr);
     }
   }

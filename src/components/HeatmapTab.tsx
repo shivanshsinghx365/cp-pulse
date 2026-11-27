@@ -288,8 +288,8 @@ export function HeatmapTab({ contests, weakTags, progress, onToggleStatus }: Pro
                     </a>
                     <div className="text-xs text-muted-ui mt-0.5 flex items-center gap-1.5 flex-wrap">
                       <span>{q.contestTitle} · {q.dateStr}</span>
-                      <span className={`${difficultyBadgeClass(q.difficulty, q.rating)} font-mono px-1.5 py-0.2 rounded`}>
-                        {q.rating ?? q.difficulty}
+                      <span className={`${difficultyBadgeClass(q.difficulty, q.platform === "LeetCode" ? null : q.rating)} font-mono px-1.5 py-0.2 rounded`}>
+                        {q.platform === "LeetCode" ? q.difficulty : (q.rating ?? q.difficulty)}
                       </span>
                     </div>
                   </div>

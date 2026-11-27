@@ -456,7 +456,7 @@ export function analyzeProfile(
     slot: m.slot,
     title: m.title,
     url: m.url,
-    ratingLabel: m.rating ? `LC ${m.rating}` : m.difficulty,
+    ratingLabel: m.difficulty,
     numericRating: m.rating,
     tags: uniq(m.tags),
     reason: m.reason,
@@ -489,7 +489,12 @@ export function analyzeProfile(
     slot: q.platform === "Codeforces" ? `${q.contestId}${q.rawIndex}` : q.platform === "AtCoder" ? `${q.contestId.toUpperCase()} ${q.slot}` : q.slot,
     title: q.title,
     url: q.url,
-    ratingLabel: q.rating !== null ? `${q.platform === "LeetCode" ? "LC" : q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}` : q.difficulty,
+    ratingLabel:
+      q.platform === "LeetCode"
+        ? q.difficulty
+        : q.rating !== null
+        ? `${q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}`
+        : q.difficulty,
     numericRating: q.rating,
     tags: uniq(q.tags),
     reason: `Matches today's POTD (${potd?.today.title})`,
@@ -540,7 +545,12 @@ export function analyzeProfile(
         slot: q.platform === "Codeforces" ? `${q.contestId}${q.rawIndex}` : q.platform === "AtCoder" ? `${q.contestId.toUpperCase()} ${q.slot}` : q.slot,
         title: q.title,
         url: q.url,
-        ratingLabel: q.rating !== null ? `${q.platform === "LeetCode" ? "LC" : q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}` : q.difficulty,
+        ratingLabel:
+      q.platform === "LeetCode"
+        ? q.difficulty
+        : q.rating !== null
+        ? `${q.platform === "Codeforces" ? "CF" : "AC"} ${q.rating}`
+        : q.difficulty,
         numericRating: q.rating,
         tags: uniq(q.tags),
         reason: `Targets growth topic: ${hits.slice(0, 2).join(", ")}`,

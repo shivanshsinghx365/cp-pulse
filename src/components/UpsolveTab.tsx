@@ -250,8 +250,8 @@ export function UpsolveTab({
                       </div>
                       <div className="text-primary-ui font-medium line-clamp-2 mt-0.5">{q.title}</div>
                     </div>
-                    <span className={`${difficultyBadgeClass(q.difficulty, q.rating)} font-mono shrink-0 px-1.5 py-0.5 rounded`}>
-                      {q.rating ?? q.difficulty}
+                    <span className={`${difficultyBadgeClass(q.difficulty, q.platform === "LeetCode" ? null : q.rating)} font-mono shrink-0 px-1.5 py-0.5 rounded`}>
+                      {q.platform === "LeetCode" ? q.difficulty : (q.rating ?? q.difficulty)}
                     </span>
                   </a>
                 ))}
