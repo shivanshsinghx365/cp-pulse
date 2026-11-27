@@ -265,10 +265,10 @@ export function App() {
   const targetCf = ownerSettings.targetCfRating || 1600;
   const targetLc = ownerSettings.targetLcRating || 2150;
 
-  // Prefer live-fetched data; fall back to Firestore snapshot if proxy not configured
+  // Prefer live-fetched data; fall back to Owner's Firestore snapshot only when signed in as Owner
   const isOwnerActive = isOwner && !activeGuestMode;
   const activeLcData = useMemo(() => {
-    if (!isOwnerActive) return null;
+    const baseSnapLc = isOwnerActive ? ownerSnapshot?.leetcode ?? null : null;
     if (liveLc) {
       // Derive missed Q1-Q4 directly from live LC contestHistory + rolling 1-year contests dataset
       const lcContestMap = new Map<string, ContestRecord>();
@@ -297,21 +297,21 @@ export function App() {
           }
         });
       }
-      const snapshotMissed = ownerSnapshot?.leetcode?.missedContestQuestions ?? [];
+      const snapshotMissed = baseSnapLc?.missedContestQuestions ?? [];
       return {
         ranking: liveLc.ranking,
         contestHistory: liveLc.contestHistory,
-        acStats: ownerSnapshot?.leetcode?.acStats ?? [],
-        tagCounts: ownerSnapshot?.leetcode?.tagCounts ?? {},
+        acStats: baseSnapLc?.acStats ?? [],
+        tagCounts: baseSnapLc?.tagCounts ?? {},
         missedContestQuestions: derivedMissed.length > 0 ? derivedMissed : snapshotMissed,
-        recentAc: ownerSnapshot?.leetcode?.recentAc ?? [],
+        recentAc: baseSnapLc?.recentAc ?? [],
       };
     }
-    return ownerSnapshot?.leetcode ?? null;
+    return baseSnapLc;
   }, [isOwnerActive, liveLc, ownerSnapshot, contests]);
 
   const activeAcRating = useMemo(
-    () => (isOwnerActive ? (liveAcRating.length > 0 ? liveAcRating : ownerSnapshot?.atcoder?.ratingHistory ?? []) : []),
+    () => (liveAcRating.length > 0 ? liveAcRating : isOwnerActive ? ownerSnapshot?.atcoder?.ratingHistory ?? [] : []),
     [isOwnerActive, liveAcRating, ownerSnapshot]
   );
 
@@ -356,12 +356,11 @@ export function App() {
   }
 
   const doneCount = Object.values(progress).filter((p) => p.status === "done").length;
-  const hasProfile = Boolean(liveCf || liveAc.length > 0 || (isOwner && ownerSnapshot));
+  const hasProfile = Boolean(
+    liveCf || liveAc.length > 0 || liveLc || liveAcRating.length > 0 || (isOwner && ownerSnapshot)
+  );
 
-  const lcRatingVal =
-    isOwnerActive && (liveLc?.ranking?.rating ?? ownerSnapshot?.leetcode?.ranking?.rating)
-      ? Math.round((liveLc?.ranking?.rating ?? ownerSnapshot?.leetcode?.ranking?.rating)!)
-      : null;
+  const lcRatingVal = activeLcData?.ranking?.rating ? Math.round(activeLcData.ranking.rating) : null;
   const acRatingVal = activeAcRating.filter((r) => r.isRated).slice(-1)[0]?.newRating ?? null;
   const quote = QUOTES[quoteIdx % QUOTES.length];
   const baseUrl = import.meta.env.BASE_URL || "./";
