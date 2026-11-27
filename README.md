@@ -1,5 +1,7 @@
 # CP Pulse — Rolling 12-Month Contest Tracker, Gap Analyzer & Private Upsolve Hub
 
+[![Open CP Pulse](https://img.shields.io/badge/Open_CP_Pulse-Live_App-0ea5e9?style=for-the-badge&logo=googlechrome&logoColor=white)](https://shivanshsinghx365.github.io/cp-pulse/)
+
 A GitHub Pages–hosted competitive programming analytics & upsolve tracker covering **LeetCode (Weekly, Biweekly & POTD)**, **Codeforces (Div. 4 / 3 / 2 / 1+2)**, and **AtCoder ABC** over a **rolling 365-day sliding window**.
 
 ## Security & Guest vs. Owner Design
