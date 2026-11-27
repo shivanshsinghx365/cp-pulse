@@ -88,7 +88,7 @@ export function PerformanceTab({
   const cfBPct = cfBRow && cfBRow.total ? Math.round((100 * cfBRow.solved) / cfBRow.total) : null;
 
   function standingBadge(delta: number | null, earlyPct: number | null) {
-    if (delta === null && earlyPct === null) return { label: "Needs Snapshot", cls: "pill-inactive" };
+    if (delta === null && earlyPct === null) return { label: "No LC Data", cls: "pill-inactive" };
     if ((delta ?? 0) >= 10 && (earlyPct ?? 100) >= 75) return { label: "Good · Climbing", cls: "badge-ok" };
     if ((delta ?? 0) < -25 || (earlyPct !== null && earlyPct < 60)) return { label: "Needs Focus", cls: "badge-gap" };
     return { label: "Average · Steady", cls: "badge-warn" };
@@ -188,7 +188,7 @@ export function PerformanceTab({
                 {lcRecentDelta >= 0 ? `+${lcRecentDelta}` : lcRecentDelta} last 5
               </span>
             ) : (
-              <span>Import snapshot in Settings for LC stats</span>
+              <span>Enter LeetCode handle &amp; click Fetch Live</span>
             )}
             {lcQ2Row !== null && <span>· Q2 {lcQ2Row}%</span>}
           </div>

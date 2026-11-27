@@ -118,6 +118,7 @@ export function App() {
 
   const [cfHandleInput, setCfHandleInput] = useState("");
   const [acHandleInput, setAcHandleInput] = useState("");
+  const [lcHandleInput, setLcHandleInput] = useState("");
   const [liveCf, setLiveCf] = useState<LiveCfResult | null>(null);
   const [liveAc, setLiveAc] = useState<AcSubmission[]>([]);
   const [liveLc, setLiveLc] = useState<LiveLcResult | null>(null);
@@ -239,6 +240,7 @@ export function App() {
         const lcH = (st.lcHandle || snap?.handles?.leetcode || "").trim();
         setCfHandleInput(cfH);
         setAcHandleInput(acH);
+        setLcHandleInput(lcH);
         if (snap?.codeforces) setLiveCf(snap.codeforces);
         setActiveGuestMode(false);
         if (cfH || acH || lcH) {
@@ -254,6 +256,7 @@ export function App() {
         setLiveAcRating([]);
         setCfHandleInput("");
         setAcHandleInput("");
+        setLcHandleInput("");
         setActiveGuestMode(false);
       }
     });
@@ -477,7 +480,7 @@ export function App() {
 
         {/* Labeled Live Handle Analyzer Bar */}
         <section className="surface-card rounded-xl p-3.5 flex flex-col lg:flex-row lg:items-end justify-between gap-3">
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2.5 items-end flex-1 max-w-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2.5 items-end flex-1 max-w-3xl">
             <div className="space-y-1">
               <label htmlFor="cf-handle-input" className="block text-xs font-medium text-muted-ui">
                 Codeforces Handle
@@ -502,11 +505,23 @@ export function App() {
                 className="input-field w-full text-xs px-3 py-2 rounded-lg"
               />
             </div>
+            <div className="space-y-1">
+              <label htmlFor="lc-handle-input" className="block text-xs font-medium text-muted-ui">
+                LeetCode Handle
+              </label>
+              <input
+                id="lc-handle-input"
+                value={lcHandleInput}
+                onChange={(e) => setLcHandleInput(e.target.value)}
+                placeholder="e.g. neal_wu"
+                className="input-field w-full text-xs px-3 py-2 rounded-lg"
+              />
+            </div>
             <button
               onClick={async () => {
                 const cfH = cfHandleInput.trim();
                 const acH = acHandleInput.trim();
-                const lcH = (ownerSettings.lcHandle || ownerSnapshot?.handles?.leetcode || "").trim();
+                const lcH = lcHandleInput.trim();
                 await refreshLiveHandles(
                   cfH,
                   acH,
@@ -515,12 +530,12 @@ export function App() {
                   isOwner && user ? { uid: user.uid, baseSnap: ownerSnapshot } : undefined
                 );
                 if (isOwner && user) {
-                  const nextSettings = { ...ownerSettings, cfHandle: cfH, acHandle: acH };
+                  const nextSettings = { ...ownerSettings, cfHandle: cfH, acHandle: acH, lcHandle: lcH };
                   setOwnerSettings(nextSettings);
                   await saveOwnerSettings(user.uid, nextSettings);
                 }
               }}
-              disabled={refreshingLive || (!cfHandleInput.trim() && !acHandleInput.trim())}
+              disabled={refreshingLive || (!cfHandleInput.trim() && !acHandleInput.trim() && !lcHandleInput.trim())}
               className="pill-inactive text-xs px-3.5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-1.5 disabled:opacity-60 transition"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshingLive ? "animate-spin" : ""}`} />
@@ -668,6 +683,7 @@ export function App() {
             setOwnerSettings(s);
             setCfHandleInput(s.cfHandle || "");
             setAcHandleInput(s.acHandle || "");
+            setLcHandleInput(s.lcHandle || "");
             if (s.cfHandle || s.acHandle || s.lcHandle) {
               await refreshLiveHandles(
                 s.cfHandle || "",

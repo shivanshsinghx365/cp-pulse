@@ -81,7 +81,7 @@ export function DiagnosisTab({
 
         <div className="surface-card rounded-2xl p-4 space-y-1">
           <div className="text-xs text-muted-ui">
-            LeetCode {lcData ? "(Synced via Daily Action)" : "(Guest: Clone repo for LC Sync)"}
+            LeetCode {lcData?.ranking ? "(Live Synced)" : "(Enter handle & click Fetch Live)"}
           </div>
           <div className="text-xl font-bold text-primary-ui font-mono">
             {lcData?.ranking ? Math.round(lcData.ranking.rating) : "—"}
@@ -92,9 +92,7 @@ export function DiagnosisTab({
           <div className="text-xs text-muted-ui">
             {lcData?.ranking
               ? `${lcData.ranking.attendedContestsCount} contests · Top ${lcData.ranking.topPercentage}%`
-              : isOwner
-              ? "Run GitHub Action sync to refresh LeetCode snapshot"
-              : "LeetCode blocks browser CORS; CF & AtCoder run live."}
+              : "Enter your LeetCode handle above & click Fetch Live"}
           </div>
         </div>
       </div>
