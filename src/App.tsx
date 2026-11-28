@@ -139,8 +139,8 @@ export function App() {
       try {
         const base = import.meta.env.BASE_URL || "./";
         const [cRes, pRes] = await Promise.all([
-          fetch(`${base}data/contests_1yr.json`),
-          fetch(`${base}data/potd.json`),
+          fetch(`${base}data/contests_1yr.json`, { cache: "no-store" }),
+          fetch(`${base}data/potd.json`, { cache: "no-store" }),
         ]);
         const cJson: RawCompactContests = await cRes.json();
         setContests(unpackContests(cJson));
