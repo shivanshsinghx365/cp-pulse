@@ -73,6 +73,35 @@ async function fetchLeetCode(username) {
   return res.text();
 }
 
+const LC_POTD_QUERY = `
+query questionOfToday {
+  activeDailyCodingChallengeQuestion {
+    date
+    link
+    question {
+      questionFrontendId
+      title
+      titleSlug
+      difficulty
+      topicTags { name }
+    }
+  }
+}`;
+
+async function fetchLeetCodePotd() {
+  const res = await fetch("https://leetcode.com/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0",
+      Referer: "https://leetcode.com/",
+    },
+    body: JSON.stringify({ query: LC_POTD_QUERY }),
+  });
+  if (!res.ok) throw new Error(`LC POTD upstream ${res.status}`);
+  return res.text();
+}
+
 // ── AtCoder rating history ───────────────────────────────────────────────────
 async function fetchAtCoderHistory(username) {
   const res = await fetch(`https://atcoder.jp/users/${encodeURIComponent(username)}/history/json`, {
@@ -94,6 +123,16 @@ export default {
 
     if (request.method !== "GET") {
       return corsResponse(request, JSON.stringify({ error: "Method not allowed" }), 405);
+    }
+
+    // /potd
+    if (url.pathname === "/potd") {
+      try {
+        const body = await fetchLeetCodePotd();
+        return corsResponse(request, body);
+      } catch (e) {
+        return corsResponse(request, JSON.stringify({ error: e.message }), 502);
+      }
     }
 
     // /lc/<username>

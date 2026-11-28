@@ -1,4 +1,5 @@
-import type { AcRatingPoint, AcSubmission, CfRatingPoint, CfSubmission } from "../types";
+import type { AcRatingPoint, AcSubmission, CfRatingPoint, CfSubmission, PotdQuestion } from "../types";
+import { mapCfTag } from "./tags";
 
 // ── Proxy URL ────────────────────────────────────────────────────────────────
 // Set VITE_CP_PROXY_URL in GitHub repo vars after deploying worker/cp-proxy.js.
@@ -131,6 +132,33 @@ export async function fetchLiveLeetCode(handle: string): Promise<LiveLcResult | 
         })),
       missedContestQuestions: [],   // computed server-side only; use snapshot
       recentAc: [],                 // not fetched via proxy; use snapshot
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch today's live LeetCode POTD via the cp-proxy Cloudflare Worker. */
+export async function fetchLivePotd(): Promise<PotdQuestion | null> {
+  if (!PROXY) return null;
+  try {
+    const res = await fetch(`${PROXY}/potd`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const active = json?.data?.activeDailyCodingChallengeQuestion;
+    const q = active?.question;
+    if (!active || !q) return null;
+    const rawTags: string[] = (q.topicTags || []).map((t: { name: string }) => t.name).filter(Boolean);
+    const tags = Array.from(new Set(rawTags.map((t) => mapCfTag(t))));
+    return {
+      date: active.date,
+      id: q.questionFrontendId,
+      title: q.title,
+      slug: q.titleSlug,
+      url: `https://leetcode.com${active.link}`,
+      difficulty: q.difficulty,
+      rawTags,
+      tags,
     };
   } catch {
     return null;

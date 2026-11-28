@@ -2,8 +2,8 @@ name: Sync Rolling 12-Month CP Data & Deploy to GitHub Pages
 
 on:
   schedule:
-    # Runs daily at 00:30 UTC (06:00 IST) to refresh POTD, rolling 365-day contests & owner snapshot
-    - cron: "30 0 * * *"
+    # Runs daily at 01:17 UTC (06:47 IST) off-peak to avoid :00/:30 UTC queue delays
+    - cron: "17 1 * * *"
   workflow_dispatch:
   push:
     branches: ["main"]

@@ -31,7 +31,7 @@ import {
   watchAuth,
   type OwnerPrivateSettings,
 } from "./lib/firebase";
-import { fetchLiveAtCoder, fetchLiveCodeforces, fetchLiveLeetCode, fetchLiveAcRatingHistory, type LiveCfResult, type LiveLcResult } from "./lib/liveApi";
+import { fetchLiveAtCoder, fetchLiveCodeforces, fetchLiveLeetCode, fetchLiveAcRatingHistory, fetchLivePotd, type LiveCfResult, type LiveLcResult } from "./lib/liveApi";
 import { analyzeProfile, unpackContests, type RawCompactContests } from "./lib/analyzer";
 import type {
   AcRatingPoint,
@@ -144,7 +144,26 @@ export function App() {
         ]);
         const cJson: RawCompactContests = await cRes.json();
         setContests(unpackContests(cJson));
-        if (pRes.ok) setPotd(await pRes.json());
+        if (pRes.ok) {
+          const pJson: PotdPayload = await pRes.json();
+          setPotd(pJson);
+          const todayUtc = new Date().toISOString().slice(0, 10);
+          if (pJson?.today?.date !== todayUtc) {
+            fetchLivePotd().then((liveToday) => {
+              if (!liveToday) return;
+              setPotd((prev) => {
+                if (!prev) return { updatedAt: Math.floor(Date.now() / 1000), today: liveToday, recent: [] };
+                if (prev.today?.slug === liveToday.slug && prev.today?.date === liveToday.date) return prev;
+                const prevToday = prev.today;
+                const nextRecent =
+                  prevToday && prevToday.slug !== liveToday.slug && !prev.recent.some((r) => r.slug === prevToday.slug)
+                    ? [prevToday, ...prev.recent].slice(0, 30)
+                    : prev.recent;
+                return { updatedAt: Math.floor(Date.now() / 1000), today: liveToday, recent: nextRecent };
+              });
+            });
+          }
+        }
       } finally {
         setLoadingData(false);
       }
