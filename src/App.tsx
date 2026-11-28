@@ -139,29 +139,44 @@ export function App() {
       try {
         const base = import.meta.env.BASE_URL || "./";
         const [cRes, pRes] = await Promise.all([
-          fetch(`${base}data/contests_1yr.json`, { cache: "no-store" }),
-          fetch(`${base}data/potd.json`, { cache: "no-store" }),
+          fetch(`${base}data/contests_1yr.json`),
+          fetch(`${base}data/potd.json`),
         ]);
         const cJson: RawCompactContests = await cRes.json();
         setContests(unpackContests(cJson));
         if (pRes.ok) {
-          const pJson: PotdPayload = await pRes.json();
+          let pJson: PotdPayload = await pRes.json();
           setPotd(pJson);
           const todayUtc = new Date().toISOString().slice(0, 10);
           if (pJson?.today?.date !== todayUtc) {
-            fetchLivePotd().then((liveToday) => {
-              if (!liveToday) return;
-              setPotd((prev) => {
-                if (!prev) return { updatedAt: Math.floor(Date.now() / 1000), today: liveToday, recent: [] };
-                if (prev.today?.slug === liveToday.slug && prev.today?.date === liveToday.date) return prev;
-                const prevToday = prev.today;
-                const nextRecent =
-                  prevToday && prevToday.slug !== liveToday.slug && !prev.recent.some((r) => r.slug === prevToday.slug)
-                    ? [prevToday, ...prev.recent].slice(0, 30)
-                    : prev.recent;
-                return { updatedAt: Math.floor(Date.now() / 1000), today: liveToday, recent: nextRecent };
+            // Cached JSON is from an older date: bypass browser cache to fetch fresh GitHub Pages data first
+            const [cFreshRes, pFreshRes] = await Promise.all([
+              fetch(`${base}data/contests_1yr.json`, { cache: "reload" }).catch(() => null),
+              fetch(`${base}data/potd.json`, { cache: "reload" }).catch(() => null),
+            ]);
+            if (cFreshRes?.ok) {
+              setContests(unpackContests(await cFreshRes.json()));
+            }
+            if (pFreshRes?.ok) {
+              pJson = await pFreshRes.json();
+              setPotd(pJson);
+            }
+            // If GitHub Pages JSON is still from yesterday, fall back to live worker /potd
+            if (pJson?.today?.date !== todayUtc) {
+              fetchLivePotd().then((liveToday) => {
+                if (!liveToday) return;
+                setPotd((prev) => {
+                  if (!prev) return { updatedAt: Math.floor(Date.now() / 1000), today: liveToday, recent: [] };
+                  if (prev.today?.slug === liveToday.slug && prev.today?.date === liveToday.date) return prev;
+                  const prevToday = prev.today;
+                  const nextRecent =
+                    prevToday && prevToday.slug !== liveToday.slug && !prev.recent.some((r) => r.slug === prevToday.slug)
+                      ? [prevToday, ...prev.recent].slice(0, 30)
+                      : prev.recent;
+                  return { updatedAt: Math.floor(Date.now() / 1000), today: liveToday, recent: nextRecent };
+                });
               });
-            });
+            }
           }
         }
       } finally {
